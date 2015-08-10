@@ -98,10 +98,14 @@ int main(int argc, char* argv[])
 	std::vector<DLT> dltArray;
 	dltArray.reserve(iterations);
 
+	int inliersPercentageAchieved = 0;
+	int inliersPercentageAccepted = 99;
 	//
 	// Run the iteration to find the best DLT, i.e, with the biggest number of inliers
 	//
-	for (int i = 0; i < iterations; ++i)
+	//for (int i = 0; i < iterations; ++i)
+	int i = 0;
+	while (inliersPercentageAchieved < inliersPercentageAccepted && i++ < points.count())
 	{
 		dltArray.push_back(DLT());
 		DLT& dlt = dltArray.back();
@@ -130,23 +134,29 @@ int main(int argc, char* argv[])
 		//
 		int inliers = dlt.computeInliers(points.getPointArray());
 
-
+		inliersPercentageAchieved = double(inliers) / double(points.count()) * 100;
 	}
 
+	std::cout 
+		<< std::endl
+		<< "[Info]  Number of Iterations : " << i << std::endl
+		<< "[Info]  Inliers Acheived     : " << inliersPercentageAchieved << "%" << std::endl << std::endl;
+
 	// Sort the dlts by error in crescent order
-	std::sort(dltArray.begin(), dltArray.end());
+	//std::sort(dltArray.begin(), dltArray.end());
+	DLT& dltConsensus = dltArray.back();
 	
 	//std::cout << std::endl;
 	//for (auto it : dltArray)
 	//	std::cout << std::fixed << it.getInliersCount() << " : " << it.getError().first + it.getError().second << std::endl;
 
-	Eigen::Matrix3d H;
-	H << 1.027308, -0.004961, -297.475919,
-		0.066875,     1.014096, -54.126748,
-		0.000312,     0.000044,    0.878409;
+	//Eigen::Matrix3d H;
+	//H << 1.027308, -0.004961, -297.475919,
+	//	0.066875,     1.014096, -54.126748,
+	//	0.000312,     0.000044,    0.878409;
 
 
-	std::cout << "\nH: " << std::endl << dltArray[0].getH() << std::endl << std::endl;
+	//std::cout << "\nH: " << std::endl << dltConsensus.getH() << std::endl << std::endl;
 
 	QImage outputImage;
 	std::pair<QImage, QImage> image;
@@ -154,14 +164,14 @@ int main(int argc, char* argv[])
 	image.second.load(inputImageFileName.second.c_str());
 
 	std::cout 
-		<< std::endl << std::fixed 
-		<< "[Info]  Projection Error  : " << dltArray[0].getError().first << ", " << dltArray[0].getError().second << std::endl
-		<< "[Info]  Inliers Count     : " << dltArray[0].getInliersCount() << " of " << points.count() << std::endl
-		<< "[Info]  Inliers Percentage: " << double(dltArray[0].getInliersCount()) / double(points.count()) * 100.0 << "%"
+		<< std::fixed 
+		<< "[Info]  Projection Error  : " << dltConsensus.getError().first << ", " << dltConsensus.getError().second << std::endl
+		<< "[Info]  Inliers Count     : " << dltConsensus.getInliersCount() << " of " << points.count() << std::endl
+		<< "[Info]  Inliers Percentage: " << double(dltConsensus.getInliersCount()) / double(points.count()) * 100.0 << "%"
 		<< std::endl << std::endl;
 
-	//projectImages(dltArray[0].getH(), image, outputImage);
-	projectImages(H, image, outputImage);
+	projectImages(dltConsensus.getH(), image, outputImage);
+	//projectImages(H, image, outputImage);
 	outputImage.save(outputImageFileName.c_str());
 
 	QApplication a(argc, argv);
