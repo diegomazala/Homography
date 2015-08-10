@@ -20,6 +20,7 @@ public:
 
 protected:
 	virtual void paintEvent(QPaintEvent *);
+	virtual void keyReleaseEvent(QKeyEvent *);
 
 	std::vector<QPoint> points;
 	int circleSize;

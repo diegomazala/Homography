@@ -59,3 +59,10 @@ void QImageWidget::paintEvent(QPaintEvent* event)
 	for (auto p : points)
 		painter.drawEllipse(p.x() - circleSize / 2, p.y() - circleSize / 2, circleSize, circleSize);
 }
+
+
+void QImageWidget::keyReleaseEvent(QKeyEvent *e)
+{
+	if (e->key() == Qt::Key_Q)
+		this->close();
+}
