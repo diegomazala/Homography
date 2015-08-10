@@ -91,15 +91,20 @@ int main(int argc, char* argv[])
 		std::cout << "[Info]  Count of points loaded from file = " << points.count() << std::endl;
 	}
 
+
+
+
 	int iterations = points.count() * 0.5;	// define the number of iterations as 50% of the number of points
 	std::vector<DLT> dltArray;
 	dltArray.reserve(iterations);
 
+	//
+	// Run the iteration to find the best DLT, i.e, with the biggest number of inliers
+	//
 	for (int i = 0; i < iterations; ++i)
 	{
 		dltArray.push_back(DLT());
 		DLT& dlt = dltArray.back();
-
 
 		//
 		// Generating 4 indices for points in order to compute homography using these points
@@ -116,8 +121,15 @@ int main(int argc, char* argv[])
 			std::cout << i << "  ";
 		}
 
-		dlt.computeHomography();
+		Eigen::MatrixXd H = dlt.computeHomography();
 		dlt.computeError();
+
+
+		//
+		// project all points and count number of inliers and outliers
+		//
+		int inliers = dlt.computeInliers(points.getPointArray());
+
 
 	}
 
@@ -126,9 +138,15 @@ int main(int argc, char* argv[])
 	
 	//std::cout << std::endl;
 	//for (auto it : dltArray)
-	//	std::cout << std::fixed << it.getError().first + it.getError().second << std::endl;
+	//	std::cout << std::fixed << it.getInliersCount() << " : " << it.getError().first + it.getError().second << std::endl;
 
-	
+	Eigen::Matrix3d H;
+	H << 1.027308, -0.004961, -297.475919,
+		0.066875,     1.014096, -54.126748,
+		0.000312,     0.000044,    0.878409;
+
+
+	std::cout << "\nH: " << std::endl << dltArray[0].getH() << std::endl << std::endl;
 
 	QImage outputImage;
 	std::pair<QImage, QImage> image;
@@ -137,10 +155,13 @@ int main(int argc, char* argv[])
 
 	std::cout 
 		<< std::endl << std::fixed 
-		<< "[Info]  Projection Error  : " << dltArray[0].getError().first << ", " << dltArray[0].getError().second 
+		<< "[Info]  Projection Error  : " << dltArray[0].getError().first << ", " << dltArray[0].getError().second << std::endl
+		<< "[Info]  Inliers Count     : " << dltArray[0].getInliersCount() << " of " << points.count() << std::endl
+		<< "[Info]  Inliers Percentage: " << double(dltArray[0].getInliersCount()) / double(points.count()) * 100.0 << "%"
 		<< std::endl << std::endl;
 
-	projectImages(dltArray[0].getH(), image, outputImage);
+	//projectImages(dltArray[0].getH(), image, outputImage);
+	projectImages(H, image, outputImage);
 	outputImage.save(outputImageFileName.c_str());
 
 	QApplication a(argc, argv);

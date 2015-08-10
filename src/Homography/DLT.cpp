@@ -2,18 +2,23 @@
 #include <iostream>
 
 
-DLT::DLT() :isNormalized(true)
+DLT::DLT() :isNormalized(true), inliers(0)
 {
 
 }
 
-DLT::DLT(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts) : isNormalized(true), points(pts)
+DLT::DLT(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts) : isNormalized(true), points(pts), inliers(0)
 {
 
 }
 
 DLT::~DLT()
 {
+}
+
+int DLT::getInliersCount() const
+{
+	return inliers;
 }
 
 void DLT::setNormalized(bool enable)
@@ -23,6 +28,7 @@ void DLT::setNormalized(bool enable)
 
 void DLT::reset()
 {
+	inliers = 0;
 	H = Eigen::Matrix4d::Identity();
 	points.clear();
 	error = std::make_pair(0.0, 0.0);
@@ -67,6 +73,28 @@ std::pair<double, double> DLT::computeError()
 Eigen::MatrixXd DLT::denormalizeH(const Eigen::Matrix3d& H, const std::pair<Eigen::Matrix3d, Eigen::Matrix3d>& normalizationTransform)
 {
 	return normalizationTransform.second.inverse() * H * normalizationTransform.first;
+}
+
+
+
+
+int DLT::computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts)
+{
+	inliers = 0;
+	for (int p = 0; p < (int)pts.size(); ++p)
+	{
+		const std::pair<Eigen::Vector2d, Eigen::Vector2d>& pt = pts[p];
+
+		Eigen::Vector3d HL = H * pt.first.homogeneous();
+		HL /= HL[2];
+
+		double d = std::pow((pt.second - Eigen::Vector2d(HL.x(), HL.y())).norm(), 2);
+
+		if (d < sqrt(5.99))
+			++inliers;
+	}
+
+	return inliers;
 }
 
 
@@ -270,5 +298,7 @@ std::pair<double, double> DLT::computeError(const Eigen::MatrixXd H, const std::
 
 bool DLT::operator < (DLT const &other)
 {
-	return (this->error.first + this->error.second) < (other.error.first + other.error.second);
+//	return (this->inliers > other.inliers) && (this->error.first + this->error.second) < (other.error.first + other.error.second);
+//	return (this->error.first + this->error.second) < (other.error.first + other.error.second);
+	return (this->inliers) > (other.inliers);
 }

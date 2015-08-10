@@ -14,6 +14,7 @@ public:
 
 	const Eigen::MatrixXd& getH() const { return H; };
 	const std::pair<double, double>& getError() const { return error; };
+	int getInliersCount() const;
 
 	void setNormalized(bool enable);
 
@@ -25,7 +26,7 @@ public:
 	Eigen::MatrixXd computeHomography();
 	std::pair<double, double> computeError();
 
-
+	int computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts);
 
 	static Eigen::MatrixXd computeHomography(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points);
 	
@@ -54,7 +55,7 @@ private:
 	std::pair<Eigen::Matrix3d, Eigen::Matrix3d> normalizationTransform;
 	Eigen::MatrixXd H;
 	std::pair<double, double> error;
-	
+	int inliers;
 };
 
 

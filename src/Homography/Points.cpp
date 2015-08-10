@@ -23,6 +23,10 @@ std::size_t Points::count() const
 	return points.size();
 }
 
+std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& Points::getPointArray()
+{
+	return this->points;
+}
 
 std::pair<Eigen::Vector2d, Eigen::Vector2d>& Points::operator[](std::size_t index)
 {

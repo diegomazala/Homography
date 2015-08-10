@@ -18,6 +18,8 @@ public:
 
 	std::size_t count() const;
 
+	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& getPointArray();
+
 	
 	std::pair<Eigen::Vector2d, Eigen::Vector2d>&		operator[](std::size_t idx);
 
