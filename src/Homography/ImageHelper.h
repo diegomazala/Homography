@@ -27,8 +27,8 @@ static void computImageSize(Eigen::MatrixXd h,
 		r[i] = h * p[i];
 		r[i] = Eigen::Vector3d(r[i].x() / r[i].z(), r[i].y() / r[i].z(), 1.0);
 
-		std::cout
-			<< "p[" << i << "] : (" << p[i].x() << ", " << p[i].y() << ")  \t\t"
+		std::cout << std::fixed
+			<< "p[" << i << "] : (" << p[i].x() << ", " << p[i].y() << ")    "
 			<< "r[" << i << "] : (" << r[i].x() << ", " << r[i].y() << ")" << std::endl;
 	}
 
@@ -81,7 +81,7 @@ static void projectImages(const Eigen::MatrixXd H, const std::pair<QImage, QImag
 
 	double aspect = (xmax - xmin) / (ymax - ymin);
 
-	output = QImage(xmax - xmin + image.first.width(), ymax - ymin, image.second.format());
+	output = QImage(xmax, ymax - ymin, image.second.format());
 	output.fill(Qt::GlobalColor::black);
 
 	std::cout << "Output Size:       " << output.width() << ", " << output.height() << std::endl;
