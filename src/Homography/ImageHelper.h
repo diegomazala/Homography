@@ -63,14 +63,13 @@ static void projectImages(const Eigen::MatrixXd H, const std::pair<QImage, QImag
 {
 	// composing both images
 	Eigen::Vector2d img_size(image.second.width(), image.second.height());
-	Eigen::Vector3d new_size = H.inverse() * img_size.homogeneous();
-	new_size /= new_size[2];
+	//Eigen::Vector3d new_size = H.inverse() * img_size.homogeneous();
+	//new_size /= new_size[2];
 
-	std::cout << "original size:  " << img_size.transpose() << std::endl;
-	std::cout << "new size:       " << new_size.transpose() << std::endl;
+	//std::cout << "original size:  " << img_size.transpose() << std::endl;
+	//std::cout << "new size:       " << new_size.transpose() << std::endl;
 
-	output = QImage(new_size.x(), new_size.y(), image.second.format());
-	output.fill(Qt::GlobalColor::black);
+
 
 	double xmin = 0;
 	double xmax = 0;
@@ -78,10 +77,58 @@ static void projectImages(const Eigen::MatrixXd H, const std::pair<QImage, QImag
 	double ymax = 0;
 	computImageSize(H.inverse(), 0, 0, image.second.width(), image.second.height(), xmin, xmax, ymin, ymax);
 
+	
+
+	double aspect = (xmax - xmin) / (ymax - ymin);
+
+	output = QImage(xmax - xmin + image.first.width(), ymax - ymin, image.second.format());
+	output.fill(Qt::GlobalColor::black);
+
+	std::cout << "Output Size:       " << output.width() << ", " << output.height() << std::endl;
+
+	//double dx = (xmax - xmin) / double(output.width());
+	//double dy = (ymax - ymin) / double(output.height());
 	double dx = (xmax - xmin) / double(image.first.width());
 	double dy = (ymax - ymin) / double(image.first.height());
 	std::cout << std::fixed << "dx, dy: " << dx << ", " << dy << std::endl;
 
+
+	const QImage& input = image.first;
+	for (int x = 0; x < input.width(); ++x)
+	{
+		for (int y = 0; y < input.height(); ++y)
+		{
+			Eigen::Vector3d p = Eigen::Vector3d(x, y, 1.0);
+			//Eigen::Vector3d p = H * Eigen::Vector3d(xmin + x * dx, ymin + y * dy, 1.0);
+			p /= p[2];
+
+			if (p.x() > -1 && p.y() > -1
+				&& p.x() < image.first.width()
+				&& p.y() < image.first.height())
+			{
+				output.setPixel(x, y, image.first.pixel(p.x(), p.y()));
+			}
+		}
+	}
+
+	for (int x = 0; x < output.width(); ++x)
+	{
+		for (int y = 0; y < output.height(); ++y)
+		{
+			//Eigen::Vector3d p = Eigen::Vector3d(xmin + x * dx, ymin + y * dy, 1.0);
+			Eigen::Vector3d p = H * Eigen::Vector3d(x, y, 1.0);
+			p /= p[2];
+
+			if (p.x() > -1 && p.y() > -1
+				&& p.x() < image.first.width()
+				&& p.y() < image.first.height())
+			{
+				output.setPixel(x, y, image.second.pixel(p.x(), p.y()));
+			}
+		}
+	}
+
+#if 0
 #if 0
 	const QImage& input = image.first;
 	for (int x = 0; x < output.width(); ++x)
@@ -138,6 +185,7 @@ static void projectImages(const Eigen::MatrixXd H, const std::pair<QImage, QImag
 			}
 		}
 	}
+#endif
 #endif
 }
 

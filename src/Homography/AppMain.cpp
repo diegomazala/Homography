@@ -158,11 +158,13 @@ int main(int argc, char* argv[])
 
 	//std::cout << "\nH: " << std::endl << dltConsensus.getH() << std::endl << std::endl;
 
+
+
+#if 1
 	QImage outputImage;
 	std::pair<QImage, QImage> image;
 	image.first.load(inputImageFileName.first.c_str());
 	image.second.load(inputImageFileName.second.c_str());
-
 	std::cout 
 		<< std::fixed 
 		<< "[Info]  Projection Error  : " << dltConsensus.getError().first << ", " << dltConsensus.getError().second << std::endl
@@ -181,4 +183,7 @@ int main(int argc, char* argv[])
 	outputWidget.show();
 
 	return a.exec();
+#else
+	return 0;
+#endif
 }
