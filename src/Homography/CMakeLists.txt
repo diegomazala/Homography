@@ -8,6 +8,7 @@ set  (SOURCE_FILES
 						QImageWidget.cpp 
 						DLT.cpp						
 						Points.cpp
+						RansacDLT.cpp
 						AppMain.cpp )
 
 set  (HEADER_FILES		
@@ -15,6 +16,7 @@ set  (HEADER_FILES
 						ImageHelper.h
 						DLT.h
 						Points.h
+						RansacDLT.h
 						)
 
 #set  (FORM_FILES		 

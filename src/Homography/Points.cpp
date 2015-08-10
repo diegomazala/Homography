@@ -28,6 +28,11 @@ std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& Points::getPointArray(
 	return this->points;
 }
 
+const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& Points::getPointArray() const
+{
+	return this->points;
+}
+
 std::pair<Eigen::Vector2d, Eigen::Vector2d>& Points::operator[](std::size_t index)
 {
 	return points[index];

@@ -1,35 +1,11 @@
 #include <QApplication>
-#include <random>
 #include "QImageWidget.h"
 #include "ImageHelper.h"
 #include "DLT.h"
 #include "Points.h"
+#include "RansacDLT.h"
 
 
-static std::vector<int> random4Indices(int min, int max)
-{
-	std::random_device rd;								// obtain a random number from hardware
-	std::default_random_engine eng(rd());				// seed the generator
-	std::uniform_int_distribution<int> distr(min, max); // define the range
-
-	std::vector<int> indices;
-	indices.push_back(distr(eng));
-	indices.push_back(distr(eng));
-	indices.push_back(distr(eng));
-	indices.push_back(distr(eng));
-
-
-	// Check if there are repeated indices
-	auto it = indices.begin();
-	while (it != indices.end() - 1)
-	{
-		if (std::find(it + 1, indices.end(), *it) != indices.end())
-			*it = distr(eng);
-		else
-			++it;
-	}
-	return indices;
-}
 
 void showImageWidgets(const std::pair<QImage, QImage>& input_image, const QImage& output_image, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points)
 {
@@ -92,60 +68,9 @@ int main(int argc, char* argv[])
 	}
 
 
+	DLT& dltConsensus = RansacDLT::solve(points);
 
 
-	int iterations = points.count() * 0.5;	// define the number of iterations as 50% of the number of points
-	std::vector<DLT> dltArray;
-	dltArray.reserve(iterations);
-
-	int inliersPercentageAchieved = 0;
-	int inliersPercentageAccepted = 99;
-	//
-	// Run the iteration to find the best DLT, i.e, with the biggest number of inliers
-	//
-	//for (int i = 0; i < iterations; ++i)
-	int i = 0;
-	while (inliersPercentageAchieved < inliersPercentageAccepted && i++ < points.count())
-	{
-		dltArray.push_back(DLT());
-		DLT& dlt = dltArray.back();
-
-		//
-		// Generating 4 indices for points in order to compute homography using these points
-		// 
-		std::cout << std::endl
-			<< "[Info]  Iteration = " << i << std::endl
-			<< "[Info]  Random 4 indices = ";
-		std::vector<int> indices = random4Indices(0, (int)points.count() - 1);
-
-		// copy points from original array to the 4-array to be used for homography
-		for each (auto i in indices)
-		{
-			dlt.addPoint(points[i]);
-			std::cout << i << "  ";
-		}
-
-		Eigen::MatrixXd H = dlt.computeHomography();
-		dlt.computeError();
-
-
-		//
-		// project all points and count number of inliers and outliers
-		//
-		int inliers = dlt.computeInliers(points.getPointArray());
-
-		inliersPercentageAchieved = double(inliers) / double(points.count()) * 100;
-	}
-
-	std::cout 
-		<< std::endl
-		<< "[Info]  Number of Iterations : " << i << std::endl
-		<< "[Info]  Inliers Acheived     : " << inliersPercentageAchieved << "%" << std::endl << std::endl;
-
-	// Sort the dlts by error in crescent order
-	//std::sort(dltArray.begin(), dltArray.end());
-	DLT& dltConsensus = dltArray.back();
-	
 	//std::cout << std::endl;
 	//for (auto it : dltArray)
 	//	std::cout << std::fixed << it.getInliersCount() << " : " << it.getError().first + it.getError().second << std::endl;
@@ -176,13 +101,13 @@ int main(int argc, char* argv[])
 	//projectImages(H, image, outputImage);
 	outputImage.save(outputImageFileName.c_str());
 
-	QApplication a(argc, argv);
+	QApplication app(argc, argv);
 	
 	QImageWidget outputWidget;
 	outputWidget.setImage(outputImage);
 	outputWidget.show();
 
-	return a.exec();
+	return app.exec();
 #else
 	return 0;
 #endif
