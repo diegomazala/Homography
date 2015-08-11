@@ -239,10 +239,13 @@ int main(int argc, char* argv[])
 
     //-- Show detected matches
 
+#if SHOW_IMAGE_WINDOW
     namedWindow("surf matches", 0);
     imshow("surf matches", img_matches);
     imwrite(outpath, img_matches);
-
     waitKey(0);
+#else
+	imwrite(outpath, img_matches);
+#endif
     return EXIT_SUCCESS;
 }

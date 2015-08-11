@@ -63,6 +63,6 @@ void QImageWidget::paintEvent(QPaintEvent* event)
 
 void QImageWidget::keyReleaseEvent(QKeyEvent *e)
 {
-	if (e->key() == Qt::Key_Q)
+	if (e->key() == Qt::Key_Q || e->key() == Qt::Key_Escape)
 		this->close();
 }
