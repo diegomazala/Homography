@@ -75,15 +75,19 @@ int main(int argc, char* argv[])
 	//for (auto it : dltArray)
 	//	std::cout << std::fixed << it.getInliersCount() << " : " << it.getError().first + it.getError().second << std::endl;
 
-	//Eigen::Matrix3d H;
+	Eigen::Matrix3d H;
 	//H << 1.027308, -0.004961, -297.475919,
 	//	0.066875,     1.014096, -54.126748,
 	//	0.000312,     0.000044,    0.878409;
 
+	H << 0.921571, 0.011174, -556.336662,
+		0.061009, 0.951503, -76.333429,
+		0.000328, 0.000050, 0.738080;
 
-	//std::cout << "\nH: " << std::endl << dltConsensus.getH() << std::endl << std::endl;
 
+	std::cout << "\nH: " << std::endl << dltConsensus.getH() << std::endl << std::endl;
 
+	//return 0;
 
 #if 1
 	QImage outputImage;
@@ -98,6 +102,8 @@ int main(int argc, char* argv[])
 		<< std::endl << std::endl;
 
 	projectImages(dltConsensus.getH(), image, outputImage);
+
+
 	//projectImages(H, image, outputImage);
 	outputImage.save(outputImageFileName.c_str());
 

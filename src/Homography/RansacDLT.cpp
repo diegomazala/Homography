@@ -46,14 +46,26 @@ DLT RansacDLT::solve(const Points& points)
 		int inliers = dlt.computeInliers(points.getPointArray());
 
 		inliersPercentageAchieved = (int)(double(inliers) / double(points.count()) * 100);
+
+		std::cout << "[Info]  Inliers Achieved     : " << inliersPercentageAchieved << "%" << std::endl << std::endl;
 	}
 
-	std::cout 
-		<< std::endl
-		<< "[Info]  Number of Iterations : " << i << std::endl
-		<< "[Info]  Inliers Acheived     : " << inliersPercentageAchieved << "%" << std::endl << std::endl;
+	DLT* dltConsensus = &dltArray.back();
 
-	return dltArray.back();
+	if (inliersPercentageAchieved < inliersPercentageAccepted)
+	{
+		std::sort(dltArray.begin(), dltArray.end());
+		dltConsensus = &dltArray.front();
+		inliersPercentageAchieved = (int)(double(dltConsensus->getInliersCount()) / double(points.count()) * 100);
+	}
+
+	std::cout
+		<< std::endl
+		<< "[Info]  -- Consensus --" << std::endl
+		<< "[Info]  Number of Iterations : " << i << std::endl
+		<< "[Info]  Inliers Achieved     : " << inliersPercentageAchieved << "%" << std::endl << std::endl;
+
+	return *dltConsensus;
 }
 
 
