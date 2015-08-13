@@ -27,9 +27,9 @@ static void computImageSize(Eigen::MatrixXd h,
 		r[i] = h * p[i];
 		r[i] = Eigen::Vector3d(r[i].x() / r[i].z(), r[i].y() / r[i].z(), 1.0);
 
-		std::cout << std::fixed
-			<< "p[" << i << "] : (" << p[i].x() << ", " << p[i].y() << ")    "
-			<< "r[" << i << "] : (" << r[i].x() << ", " << r[i].y() << ")" << std::endl;
+		//std::cout << std::fixed
+		//	<< "p[" << i << "] : (" << p[i].x() << ", " << p[i].y() << ")    "
+		//	<< "r[" << i << "] : (" << r[i].x() << ", " << r[i].y() << ")" << std::endl;
 	}
 
 	min_x = r[0].x();
@@ -54,8 +54,8 @@ static void computImageSize(Eigen::MatrixXd h,
 	}
 
 
-	std::cout << "\n\nMinMax : (" << min_x << "," << min_y << ") (" << max_x << ", " << max_y << ")" << std::endl;
-	std::cout << "Image Size: " << max_x - min_x << ", " << max_y - min_y << std::endl;
+	//std::cout << "\n\nMinMax : (" << min_x << "," << min_y << ") (" << max_x << ", " << max_y << ")" << std::endl;
+	//std::cout << "Image Size: " << max_x - min_x << ", " << max_y - min_y << std::endl;
 }
 
 
@@ -75,7 +75,7 @@ static void projectImages(const Eigen::MatrixXd H, const std::pair<QImage, QImag
 	output = QImage(xmax, ymax - ymin, image.second.format());
 	output.fill(Qt::GlobalColor::black);
 
-	std::cout << "Output Size:       " << output.width() << ", " << output.height() << std::endl;
+	//std::cout << "Output Size:       " << output.width() << ", " << output.height() << std::endl;
 
 	//double dx = (xmax - xmin) / double(output.width());
 	//double dy = (ymax - ymin) / double(output.height());
@@ -88,8 +88,9 @@ static void projectImages(const Eigen::MatrixXd H, const std::pair<QImage, QImag
 	{
 		for (int y = 0; y < image.first.height(); ++y)
 		{
-			Eigen::Vector3d p = Eigen::Vector3d(x, y, 1.0);
-			//Eigen::Vector3d p = H * Eigen::Vector3d(xmin + x * dx, ymin + y * dy, 1.0);
+			
+			Eigen::Vector3d p = Eigen::Vector3d(x, ymin + y, 1.0);
+			//Eigen::Vector3d p = Eigen::Vector3d(xmin + x * dx, ymin + y * dy, 1.0);
 			p /= p[2];
 
 			if (p.x() > -1 && p.y() > -1
@@ -105,8 +106,8 @@ static void projectImages(const Eigen::MatrixXd H, const std::pair<QImage, QImag
 	{
 		for (int y = 0; y < output.height(); ++y)
 		{
-			//Eigen::Vector3d p = Eigen::Vector3d(xmin + x * dx, ymin + y * dy, 1.0);
-			Eigen::Vector3d p = H * Eigen::Vector3d(x, y, 1.0);
+			Eigen::Vector3d p = H * Eigen::Vector3d(x, ymin + y, 1.0);
+			//Eigen::Vector3d p = H * Eigen::Vector3d(xmin + x * dx, ymin + y * dy, 1.0);
 			p /= p[2];
 
 			if (p.x() > -1 && p.y() > -1
@@ -117,66 +118,6 @@ static void projectImages(const Eigen::MatrixXd H, const std::pair<QImage, QImag
 			}
 		}
 	}
-
-#if 0
-#if 0
-	const QImage& input = image.first;
-	for (int x = 0; x < output.width(); ++x)
-	{
-		for (int y = 0; y < output.height(); ++y)
-		{
-			Eigen::Vector3d p = H * Eigen::Vector3d(xmin + x * dx, ymin + y * dy, 1.0);
-			p /= p[2];
-
-			if (p.x() > -1 && p.y() > -1
-				&& p.x() < image.first.width()
-				&& p.y() < image.first.height())
-			{
-				output.setPixel(x, y, image.first.pixel(p.x(), p.y()));
-			}
-
-
-			p = H * Eigen::Vector3d(x, y, 1.0);
-			p /= p[2];
-
-			if (p.x() > -1 && p.y() > -1
-				&& p.x() < image.second.width()
-				&& p.y() < image.second.height())
-			{
-				output.setPixel(x, y, image.second.pixel(p.x(), p.y()));
-			}
-		}
-	}
-
-
-#else
-	for (int x = 0; x < image.first.width(); ++x)
-	{
-		for (int y = 0; y < image.first.height(); ++y)
-		{
-			output.setPixel(x, y, image.first.pixel(x, y));
-		}
-	}
-
-
-
-	for (int x = xmin; x < output.width(); ++x)
-	{
-		for (int y = ymin; y < output.height(); ++y)
-		{
-			Eigen::Vector3d p = H * Eigen::Vector3d(x, y, 1.0);
-			p /= p[2];
-
-			if (p.x() > -1 && p.y() > -1
-				&& p.x() < image.second.width()
-				&& p.y() < image.second.height())
-			{
-				output.setPixel(x, y, image.second.pixel(p.x(), p.y()));
-			}
-		}
-	}
-#endif
-#endif
 }
 
 
