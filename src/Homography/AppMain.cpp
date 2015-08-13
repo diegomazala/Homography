@@ -91,11 +91,14 @@ static int runProgramGeneratingMatchingPoints(const std::vector<std::string>& im
 		cmd << "surf_matcher.exe " << inputImageFileName.first << " " << inputImageFileName.second << " out_surf.png";
 
 		std::cout << std::endl << cmd.str() << std::endl << std::endl;
-		std::cout << "[Info]  Wait. Looking for matching points ... " << std::endl;
+		std::cout << "[Info]  Wait. Looking for matching points ... " << std::endl << std::endl;
 
 		system(cmd.str().c_str());
 		
-		std::cout << "[Info]  Press ESC to close window and continue program" << std::endl;
+		std::cout 
+			<< std::endl
+			<< "[Info]  ... Matching points found." << std::endl;
+		//std::cout << "[Info]  Press ESC to close window and continue program" << std::endl;
 
 
 		std::string outputImageFileName(imageFiles.back());
@@ -133,6 +136,7 @@ static int runProgramGeneratingMatchingPoints(const std::vector<std::string>& im
 		outputImage.save(outputImageFileName.c_str());
 
 		inputImageFileName.first = imageFiles.back();
+
 	}
 	
 	return EXIT_SUCCESS;
@@ -184,11 +188,11 @@ int main(int argc, char* argv[])
 
 
 	outputImage.save(imageFiles.back().c_str());
-	
 
 	QImageWidget outputWidget;
 	outputWidget.setImage(outputImage);
 	outputWidget.show();
+
 
 
 	return app.exec();

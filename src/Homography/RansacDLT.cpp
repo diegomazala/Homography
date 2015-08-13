@@ -7,6 +7,11 @@
 
 DLT RansacDLT::solve(const Points& points)
 {
+	double s = 4.0;
+	double p = 0.99;
+	double N = (double)points.count();
+	double T = 0.0;
+	double E = (double)points.count();
 	std::vector<DLT> dltArray;
 
 	int inliersPercentageAchieved = 0;
@@ -16,7 +21,8 @@ DLT RansacDLT::solve(const Points& points)
 	// Run the iteration to find the best DLT, i.e, with the biggest number of inliers
 	//
 	int i = 0;
-	while (inliersPercentageAchieved < inliersPercentageAccepted && i++ < points.count())
+	//while (inliersPercentageAchieved < inliersPercentageAccepted && i++ < points.count())
+	while (i < N && i++ < points.count())
 	{
 		dltArray.push_back(DLT());
 		DLT& dlt = dltArray.back();
@@ -37,7 +43,7 @@ DLT RansacDLT::solve(const Points& points)
 		}
 
 		Eigen::MatrixXd H = dlt.computeHomography();
-		dlt.computeError();
+		dlt.computeGeometricError();
 
 
 		//
@@ -45,9 +51,21 @@ DLT RansacDLT::solve(const Points& points)
 		//
 		int inliers = dlt.computeInliers(points.getPointArray());
 
+		// Compute error for this iteration and update the global error 
+		double Ei = 1.0 - (double(inliers) / double(points.count()));
+		if (Ei < E)
+			E = Ei;
+
+		N = std::log(1.0 - p) / std::log( 1.0 - std::pow( 1.0 - E, s)  );
+
+		T = (1.0 - E) * points.count();
+
 		inliersPercentageAchieved = (int)(double(inliers) / double(points.count()) * 100);
 
-		std::cout << "[Info]  Inliers Achieved     : " << inliersPercentageAchieved << "%" << std::endl << std::endl;
+		std::cout 
+			<< std::fixed
+			<< "[Info]  Inliers Achieved  : " << inliersPercentageAchieved << "%  ==> " << inliers << " of " << points.count() << std::endl
+			<< "[Info]  E, N, T           : " << E << ", " << N << ", " << T << std::endl << std::endl;
 	}
 
 	DLT* dltConsensus = &dltArray.back();
@@ -61,9 +79,10 @@ DLT RansacDLT::solve(const Points& points)
 
 	std::cout
 		<< std::endl
-		<< "[Info]  -- Consensus --" << std::endl
+		<< "[Info]  -- Consensus:" << std::endl
 		<< "[Info]  Number of Iterations : " << i << std::endl
-		<< "[Info]  Inliers Achieved     : " << inliersPercentageAchieved << "%" << std::endl << std::endl;
+		<< "[Info]  Inliers Achieved     : " << inliersPercentageAchieved << "%" << std::endl
+		<< "[Info]  E, N, T              : " << E << ", " << N << ", " << T << std::endl << std::endl;
 
 	return *dltConsensus;
 }

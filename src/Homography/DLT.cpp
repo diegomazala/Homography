@@ -62,9 +62,9 @@ Eigen::MatrixXd DLT::computeHomography()
 
 
 
-std::pair<double, double> DLT::computeError()
+std::pair<double, double> DLT::computeGeometricError()
 {
-	error = computeError(this->H, this->points);
+	error = computeGeometricError(this->H, this->points);
 	return error;
 }
 
@@ -78,7 +78,7 @@ Eigen::MatrixXd DLT::denormalizeH(const Eigen::Matrix3d& H, const std::pair<Eige
 
 
 
-int DLT::computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts)
+int DLT::computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, double distance_threshold)
 {
 	inliers = 0;
 	for (int p = 0; p < (int)pts.size(); ++p)
@@ -90,7 +90,7 @@ int DLT::computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vect
 
 		double d = std::pow((pt.second - Eigen::Vector2d(HL.x(), HL.y())).norm(), 2);
 
-		if (d < sqrt(5.99))
+		if (d < distance_threshold)
 			++inliers;
 	}
 
@@ -273,7 +273,7 @@ Eigen::MatrixXd DLT::computeHomography(const std::vector<std::pair<Eigen::Vector
 
 
 
-std::pair<double, double> DLT::computeError(const Eigen::MatrixXd H, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points)
+std::pair<double, double> DLT::computeGeometricError(const Eigen::MatrixXd H, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points)
 {
 	std::pair<double, double> error(0.0, 0.0);
 

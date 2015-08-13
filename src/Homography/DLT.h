@@ -24,9 +24,9 @@ public:
 	
 	
 	Eigen::MatrixXd computeHomography();
-	std::pair<double, double> computeError();
+	std::pair<double, double> computeGeometricError();
 
-	int computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts);
+	int computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, double distance_threshold = std::sqrt(5.99));
 
 	static Eigen::MatrixXd computeHomography(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points);
 	
@@ -42,7 +42,7 @@ public:
 
 	static Eigen::MatrixXd denormalizeH(const Eigen::Matrix3d& H, const std::pair<Eigen::Matrix3d, Eigen::Matrix3d>& normalizationTransform);
 
-	static std::pair<double, double> computeError(const Eigen::MatrixXd H, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points);
+	static std::pair<double, double> computeGeometricError(const Eigen::MatrixXd H, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points);
 
 
 	bool operator < (DLT const &other);
