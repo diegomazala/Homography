@@ -37,7 +37,10 @@ void showImageWidgets(const std::pair<QImage, QImage>& input_image, const QImage
 
 
 
-static int runProgramReadingPointsFile(const std::pair<std::string, std::string>& inputImageFileName, const std::string& pointsFile, QImage& outputImage)
+static int runProgramReadingPointsFile(	const std::pair<std::string, std::string>& inputImageFileName, 
+										const std::string& pointsFile, 
+										QImage& outputImage, 
+										const std::string outputFileName)
 {
 	std::pair<QImage, QImage> image;
 
@@ -58,16 +61,42 @@ static int runProgramReadingPointsFile(const std::pair<std::string, std::string>
 
 	DLT& dltConsensus = RansacDLT::solve(points);
 
-	image.first.load(inputImageFileName.first.c_str());
-	image.second.load(inputImageFileName.second.c_str());
 	std::cerr
-		<< std::fixed
-		<< "[Info]  Projection Error  : " << dltConsensus.getError().first << ", " << dltConsensus.getError().second << std::endl
-		<< "[Info]  Inliers Count     : " << dltConsensus.getInliersCount() << " of " << points.count() << std::endl
-		<< "[Info]  Inliers Percentage: " << double(dltConsensus.getInliersCount()) / double(points.count()) * 100.0 << "%"
+		<< std::fixed << std::endl
+		<< "[Info]  DLT RANSAC           : " << std::endl
+		<< "[Info]  Projection Error     : " << dltConsensus.getError().first << ", " << dltConsensus.getError().second << std::endl
+		<< "[Info]  Inliers Count        : " << dltConsensus.getInliersCount() << " of " << points.count() << std::endl
+		<< "[Info]  Inliers Percentage   : " << double(dltConsensus.getInliersCount()) / double(points.count()) * 100.0 << "%"
 		<< std::endl << std::endl;
 
-	projectImages(dltConsensus.getH(), image, outputImage);
+
+	// Recomputing DLT from inliers.
+	// This is useful for distribution of the error between the inliers
+	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> inliers_pts;
+	DLT::getInliers(points.getPointArray(), dltConsensus.getH(), inliers_pts);
+	DLT dltInliers(inliers_pts);
+	dltInliers.computeHomography();
+	dltInliers.computeGeometricError();
+	dltInliers.computeInliers(inliers_pts);
+
+	std::cerr
+		<< std::fixed << std::endl
+		<< "[Info]  DLT from all inliers : " << std::endl
+		<< "[Info]  Projection Error     : " << dltInliers.getError().first << ", " << dltInliers.getError().second << std::endl
+		<< "[Info]  Inliers Count        : " << dltInliers.getInliersCount() << " of " << points.count() << std::endl
+		<< "[Info]  Inliers Percentage   : " << double(dltInliers.getInliersCount()) / double(points.count()) * 100.0 << "%"
+		<< std::endl << std::endl;
+
+
+
+	image.first.load(inputImageFileName.first.c_str());
+	image.second.load(inputImageFileName.second.c_str());
+	
+	//projectImages(dltConsensus.getH(), image, outputImage);
+	projectImages(dltInliers.getH(), image, outputImage);
+
+
+	outputImage.save(outputFileName.c_str());
 
 	return EXIT_SUCCESS;
 }
@@ -122,16 +151,39 @@ static int runProgramGeneratingMatchingPoints(const std::vector<std::string>& im
 
 		DLT& dltConsensus = RansacDLT::solve(points);
 
-		image.first.load(inputImageFileName.first.c_str());
-		image.second.load(inputImageFileName.second.c_str());
 		std::cerr
-			<< std::fixed
-			<< "[Info]  Projection Error  : " << dltConsensus.getError().first << ", " << dltConsensus.getError().second << std::endl
-			<< "[Info]  Inliers Count     : " << dltConsensus.getInliersCount() << " of " << points.count() << std::endl
-			<< "[Info]  Inliers Percentage: " << double(dltConsensus.getInliersCount()) / double(points.count()) * 100.0 << "%"
+			<< std::fixed << std::endl
+			<< "[Info]  DLT RANSAC           : " << std::endl
+			<< "[Info]  Projection Error     : " << dltConsensus.getError().first << ", " << dltConsensus.getError().second << std::endl
+			<< "[Info]  Inliers Count        : " << dltConsensus.getInliersCount() << " of " << points.count() << std::endl
+			<< "[Info]  Inliers Percentage   : " << double(dltConsensus.getInliersCount()) / double(points.count()) * 100.0 << "%"
+			<< std::endl << std::endl;
+		
+		
+		// Recomputing DLT from inliers.
+		// This is useful for distribution of the error between the inliers
+		std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> inliers_pts;
+		DLT::getInliers(points.getPointArray(), dltConsensus.getH(), inliers_pts);
+		DLT dltInliers(inliers_pts);
+		dltInliers.computeHomography();
+		dltInliers.computeGeometricError();
+		dltInliers.computeInliers(inliers_pts);
+
+		std::cerr
+			<< std::fixed << std::endl
+			<< "[Info]  DLT from all inliers : " << std::endl
+			<< "[Info]  Projection Error     : " << dltInliers.getError().first << ", " << dltInliers.getError().second << std::endl
+			<< "[Info]  Inliers Count        : " << dltInliers.getInliersCount() << " of " << points.count() << std::endl
+			<< "[Info]  Inliers Percentage   : " << double(dltInliers.getInliersCount()) / double(points.count()) * 100.0 << "%"
 			<< std::endl << std::endl;
 
-		projectImages(dltConsensus.getH(), image, outputImage);
+
+
+		image.first.load(inputImageFileName.first.c_str());
+		image.second.load(inputImageFileName.second.c_str());
+
+		//projectImages(dltConsensus.getH(), image, outputImage);
+		projectImages(dltInliers.getH(), image, outputImage);
 
 		outputImage.save(outputImageFileName.c_str());
 
@@ -183,16 +235,13 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
-		runProgramReadingPointsFile(std::make_pair(imageFiles[0], imageFiles[1]), pointsFile, outputImage);
+		runProgramReadingPointsFile(std::make_pair(imageFiles[0], imageFiles[1]), pointsFile, outputImage, imageFiles.back());
 	}
 
-
-	outputImage.save(imageFiles.back().c_str());
 
 	QImageWidget outputWidget;
 	outputWidget.setImage(outputImage);
 	outputWidget.show();
-
 
 
 	return app.exec();

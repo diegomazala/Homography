@@ -22,11 +22,15 @@ public:
 	void addPoint(const std::pair<Eigen::Vector2d, Eigen::Vector2d>& pt);
 
 	
-	
 	Eigen::MatrixXd computeHomography();
 	std::pair<double, double> computeGeometricError();
 
 	int computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, double distance_threshold = std::sqrt(5.99));
+
+	static int getInliers(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& input_pts, 
+							const Eigen::MatrixXd& H,
+							std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& output_pts,
+							double distance_threshold = std::sqrt(5.99));
 
 	static Eigen::MatrixXd computeHomography(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points);
 	
@@ -55,7 +59,7 @@ private:
 	std::pair<Eigen::Matrix3d, Eigen::Matrix3d> normalizationTransform;
 	Eigen::MatrixXd H;
 	std::pair<double, double> error;
-	int inliers;
+	int inliersCount;
 };
 
 

@@ -2,12 +2,12 @@
 #include <iostream>
 
 
-DLT::DLT() :isNormalized(true), inliers(0)
+DLT::DLT() :isNormalized(true), inliersCount(0)
 {
 
 }
 
-DLT::DLT(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts) : isNormalized(true), points(pts), inliers(0)
+DLT::DLT(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts) : isNormalized(true), points(pts), inliersCount(0)
 {
 
 }
@@ -18,8 +18,9 @@ DLT::~DLT()
 
 int DLT::getInliersCount() const
 {
-	return inliers;
+	return inliersCount;
 }
+
 
 void DLT::setNormalized(bool enable)
 {
@@ -28,7 +29,7 @@ void DLT::setNormalized(bool enable)
 
 void DLT::reset()
 {
-	inliers = 0;
+	inliersCount = 0;
 	H = Eigen::Matrix4d::Identity();
 	points.clear();
 	error = std::make_pair(0.0, 0.0);
@@ -62,6 +63,7 @@ Eigen::MatrixXd DLT::computeHomography()
 
 
 
+
 std::pair<double, double> DLT::computeGeometricError()
 {
 	error = computeGeometricError(this->H, this->points);
@@ -80,21 +82,19 @@ Eigen::MatrixXd DLT::denormalizeH(const Eigen::Matrix3d& H, const std::pair<Eige
 
 int DLT::computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, double distance_threshold)
 {
-	inliers = 0;
-	for (int p = 0; p < (int)pts.size(); ++p)
+	inliersCount = 0;
+	for (const auto& pt : pts)
 	{
-		const std::pair<Eigen::Vector2d, Eigen::Vector2d>& pt = pts[p];
-
 		Eigen::Vector3d HL = H * pt.first.homogeneous();
 		HL /= HL[2];
 
 		double d = std::pow((pt.second - Eigen::Vector2d(HL.x(), HL.y())).norm(), 2);
 
 		if (d < distance_threshold)
-			++inliers;
+			++inliersCount;
 	}
 
-	return inliers;
+	return inliersCount;
 }
 
 
@@ -224,9 +224,7 @@ std::pair<Eigen::Matrix3d, Eigen::Matrix3d> DLT::normalizePoints(const std::vect
 
 Eigen::MatrixXd DLT::computeHomography(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points)
 {
-	assert(points.size() == 4);
-
-	Eigen::MatrixXd A(2 * points.size(), 9);	// 8 x 9
+	Eigen::MatrixXd A(2 * points.size(), 9);	// 2n x 9
 	int i = 0, j = 0;
 	for (const auto p : points)
 	{
@@ -254,7 +252,11 @@ Eigen::MatrixXd DLT::computeHomography(const std::vector<std::pair<Eigen::Vector
 
 	//std::cout << "A: " << std::endl << A << std::endl << std::endl;
 
-	Eigen::MatrixXd kernel = A.fullPivLu().kernel();
+	//Eigen::MatrixXd kernel = A.fullPivLu().kernel();
+	Eigen::JacobiSVD<Eigen::MatrixXd> SVD(A, Eigen::ComputeFullV);
+	Eigen::MatrixXd kernel = SVD.matrixV().col(SVD.matrixV().cols() - 1);
+	
+
 
 	Eigen::MatrixXd H(3, 3);
 	H(0, 0) = kernel(0);
@@ -289,16 +291,43 @@ std::pair<double, double> DLT::computeGeometricError(const Eigen::MatrixXd H, co
 	}
 
 
-	std::cout << std::fixed << "[Info]  Projection Error  : " << error.first << ", " << error.second << std::endl;
+	//std::cout << std::fixed << "[Info]  Projection Error  : " << error.first << ", " << error.second << std::endl;
 
 	return error;
 }
 
 
 
+int DLT::getInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& input_pts,
+					const Eigen::MatrixXd& H,
+					std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& output_pts,
+					double distance_threshold)
+{
+	output_pts.clear();
+
+	int inliers = 0;
+	
+	for (const auto& pt : input_pts)
+	{
+		Eigen::Vector3d HL = H * pt.first.homogeneous();
+		HL /= HL[2];
+
+		double d = std::pow((pt.second - Eigen::Vector2d(HL.x(), HL.y())).norm(), 2);
+
+		if (d < distance_threshold)
+		{
+			++inliers;
+			output_pts.push_back(pt);
+		}
+	}
+
+	return inliers;
+}
+
+
 bool DLT::operator < (DLT const &other)
 {
 //	return (this->inliers > other.inliers) && (this->error.first + this->error.second) < (other.error.first + other.error.second);
 //	return (this->error.first + this->error.second) < (other.error.first + other.error.second);
-	return (this->inliers) > (other.inliers);
+	return (this->inliersCount) > (other.inliersCount);
 }
