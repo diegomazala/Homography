@@ -21,6 +21,10 @@ public:
 	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& getPointArray();
 	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& getPointArray() const;
 
+
+	static void projectPoints(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts_src,
+								std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts_dst,
+								const Eigen::Matrix3d& H);
 	
 	std::pair<Eigen::Vector2d, Eigen::Vector2d>&		operator[](std::size_t idx);
 

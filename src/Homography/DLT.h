@@ -16,10 +16,13 @@ public:
 	const std::pair<double, double>& getError() const { return error; };
 	int getInliersCount() const;
 
+	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& getPoints() const { return points; }
+
 	void setNormalized(bool enable);
 
 	void reset();
 	void addPoint(const std::pair<Eigen::Vector2d, Eigen::Vector2d>& pt);
+	
 
 	
 	Eigen::MatrixXd computeHomography();

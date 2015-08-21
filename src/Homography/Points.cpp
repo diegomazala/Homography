@@ -92,3 +92,22 @@ bool Points::readFromFile(const std::string filePath, std::vector<std::pair<Eige
 }
 
 
+
+void Points::projectPoints(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts_src,
+	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts_dst,
+	const Eigen::Matrix3d& H)
+{
+	pts_dst.clear();
+	for (const auto pt : pts_src)
+	{
+		const Eigen::Vector2d p1 = pt.first;
+		Eigen::Vector3d hp1 = H * p1.homogeneous();
+		hp1 /= hp1[2];
+
+		const Eigen::Vector2d p2 = pt.second;
+		Eigen::Vector3d hp2 = H.inverse() * p2.homogeneous();
+		hp2 /= hp2[2];
+
+		pts_dst.push_back(std::make_pair(Eigen::Vector2d(hp1.x(), hp1.y()), Eigen::Vector2d(hp2.x(), hp2.y())));
+	}
+}
