@@ -4,28 +4,15 @@ get_filename_component(TARGET_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 
 
 
-set  (SOURCE_FILES		
-						QImageWidget.cpp 
-						DLT.cpp						
-						Points.cpp
-						RansacDLT.cpp
-						GaussNewton.cpp
-						AppMain.cpp )
+set  (SOURCE_FILES		MosaicMain.cpp )
 
-set  (HEADER_FILES		
-						QImageWidget.h
-						ImageHelper.h
-						DLT.h
-						Points.h
-						GaussNewton.h
-						RansacDLT.h
-						)
+set  (HEADER_FILES						)
 
 
 include_directories (${CMAKE_SOURCE_DIR})
 
 
-add_library(
+add_executable(
   ${TARGET_NAME}
   ${SOURCE_FILES}
   ${HEADER_FILES}
@@ -34,6 +21,8 @@ add_library(
 
 target_link_libraries (	
 	${TARGET_NAME} 
+	Qt5::Widgets
+	Homography
 )
 
 
