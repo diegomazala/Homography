@@ -1,14 +1,64 @@
 #include "GaussNewton.h"
 #include "Points.h"
 #include <iostream>
+#include <limits>
+#include <iomanip>
 
 
-Eigen::MatrixXd GaussNewton::computeDeltaH(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& H)
+double GaussNewton::solve(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+							const Eigen::MatrixXd& H,
+							int max_iterations,
+							Eigen::MatrixXd& H_out)
+{
+
+	double original_error = GaussNewton::getSumError(pts, H);
+	bool error_minimized = true;
+	const double min_error_diff = 0.000001;
+
+	double error = original_error;
+
+	H_out = H;
+
+	int it = 0;
+	while (it++ < max_iterations && error_minimized)
+	{
+		Eigen::MatrixXd H_it = H_out; 
+
+		Eigen::MatrixXd dH = GaussNewton::computeDeltaH(pts, H_it);
+
+		double error_it = GaussNewton::getSumError(pts, H_it + dH);
+
+		if (error > (error_it - min_error_diff))
+		{
+			std::cout
+				<< std::setprecision(std::numeric_limits<double>::digits10 + 1)
+				<< "[Info]  Error Minimized : " << error << " -> " << error_it
+				<< std::endl;
+			error = error_it;
+			H_out = H_it + dH;
+		}
+		else
+		{
+			std::cout
+				<< std::setprecision(std::numeric_limits<double>::digits10 + 1)
+				<< "[Info]  Error Maximized : " << error << " -> " << error_it
+				<< std::endl;
+			error_minimized = false;
+		}
+	}
+
+	return error;
+}
+
+
+
+
+
+Eigen::MatrixXd GaussNewton::computeDeltaH(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, 
+											const Eigen::MatrixXd& H)
 {
 	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> hp;
 	Points::projectPoints(pts, hp, H);
-
-	//double sum_error = GaussNewton::getSumError(pts, H);
 
 	Eigen::MatrixXd J = GaussNewton::buildMatrixJ(pts);
 
@@ -16,16 +66,14 @@ Eigen::MatrixXd GaussNewton::computeDeltaH(const std::vector<std::pair<Eigen::Ve
 
 	Eigen::VectorXd fx = GaussNewton::buildFx(pts, H);
 
-	//sum_error = GaussNewton::getSumError(pts, H);
-	//std::cout << std::endl << "fx" << std::endl << fx << std::endl << std::endl;
-	//std::cout << "sum_error: " << sum_error << std::endl;
-
 	Eigen::MatrixXd b = -J.transpose() * fx;
 	Eigen::MatrixXd x = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
 
+	//std::cout << "J : " << J.rows() << ", " << J.cols() << std::endl;
 	//std::cout << "fx: " << fx.rows() << ", " << fx.cols() << std::endl;
-	//std::cout << "b: " << b.rows() << ", " << b.cols() << std::endl;
-	//std::cout << "x: " << x.rows() << ", " << x.cols() << std::endl;
+	//std::cout << "A : " << A.rows() << ", " << A.cols() << std::endl;
+	//std::cout << "b : " << b.rows() << ", " << b.cols() << std::endl;
+	//std::cout << "x : " << x.rows() << ", " << x.cols() << std::endl;
 
 	Eigen::MatrixXd dH(3, 3);
 	dH(0, 0) = x(0);
@@ -42,7 +90,8 @@ Eigen::MatrixXd GaussNewton::computeDeltaH(const std::vector<std::pair<Eigen::Ve
 }
 
 
-double GaussNewton::getSumError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::Matrix3d& H)
+double GaussNewton::getSumError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, 
+								const Eigen::Matrix3d& H)
 {
 	double sum_error = 0.0;
 	for (const auto pt : pts)
@@ -65,7 +114,9 @@ double GaussNewton::getSumError(const std::vector<std::pair<Eigen::Vector2d, Eig
 }
 
 
-double GaussNewton::getSumError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& hp)
+
+double GaussNewton::getSumError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, 
+								const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& hp)
 {
 	double sum_error = 0.0;
 	for (int i = 0; i < pts.size(); ++i)
@@ -83,6 +134,7 @@ Eigen::MatrixXd GaussNewton::buildMatrixJ(const std::vector<std::pair<Eigen::Vec
 {
 	int i = 0;
 	Eigen::MatrixXd J(2 * pts.size(), 9);		// 8 x 9, 2n x 9
+
 	for (const auto p : pts)
 	{
 		J(i, 0) = p.first.x();
@@ -110,9 +162,13 @@ Eigen::MatrixXd GaussNewton::buildMatrixJ(const std::vector<std::pair<Eigen::Vec
 	return J;
 }
 
-Eigen::VectorXd GaussNewton::buildFx(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& H)
+
+
+
+Eigen::VectorXd GaussNewton::buildFx(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, 
+										const Eigen::MatrixXd& H)
 {
-	Eigen::VectorXd fx(2 * pts.size());	// 8
+	Eigen::VectorXd fx(2 * pts.size());	// 2n x 1
 	int p = 0;
 	for (int i = 0; i < pts.size(); ++i)
 	{
@@ -121,15 +177,8 @@ Eigen::VectorXd GaussNewton::buildFx(const std::vector<std::pair<Eigen::Vector2d
 		hp3d /= hp3d[2];
 		Eigen::Vector2d hp(hp3d.x(), hp3d.y());
 
-#if 1
 		fx(p++) = std::pow((pts[i].first.x() - hp.x()), 2);
 		fx(p++) = std::pow((pts[i].first.y() - hp.y()), 2);
-
-#else
-		double error = std::pow((pts[i].first - hp).norm(), 2);
-		fx(i) = error;
-		//std::cout << std::fixed << "error  fx : " << fx(i) << "   " << pts[i].first.transpose() << "   " << hp.transpose() << std::endl;
-#endif
 	}
 
 	return fx;

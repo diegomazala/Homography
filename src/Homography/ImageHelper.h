@@ -72,7 +72,7 @@ static void projectImages(const Eigen::MatrixXd H, const std::pair<QImage, QImag
 
 	double aspect = (xmax - xmin) / (ymax - ymin);
 
-	output = QImage(xmax, ymax - ymin, image.second.format());
+	output = QImage(xmax + 1, ymax - ymin + 1, image.second.format());
 	output.fill(Qt::GlobalColor::black);
 
 	//std::cout << "Output Size:       " << output.width() << ", " << output.height() << std::endl;

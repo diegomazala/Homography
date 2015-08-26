@@ -8,15 +8,33 @@
 class GaussNewton
 {
 public:
-	static Eigen::MatrixXd computeDeltaH(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& H);
 
-	static double getSumError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::Matrix3d& H);
+	static double solve(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, 
+						const Eigen::MatrixXd& H, 
+						int max_iterations,
+						Eigen::MatrixXd& H_out);
 
-	static double getSumError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& hp);
+
+
+	static Eigen::MatrixXd computeDeltaH(	const std::vector<std::pair<Eigen::Vector2d, 
+											Eigen::Vector2d>>& pts, 
+											const Eigen::MatrixXd& H);
+
+
+	static double getSumError(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, 
+								const Eigen::Matrix3d& H);
+
+
+	static double getSumError(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, 
+								const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& hp);
+
 
 	static Eigen::MatrixXd buildMatrixJ(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts);
 
-	static Eigen::VectorXd buildFx(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& H);
+	
+	static Eigen::VectorXd buildFx(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, 
+									const Eigen::MatrixXd& H);
+
 };
 
 

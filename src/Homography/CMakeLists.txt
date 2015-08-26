@@ -9,6 +9,7 @@ set  (SOURCE_FILES
 						DLT.cpp						
 						Points.cpp
 						RansacDLT.cpp
+						GaussNewton.cpp
 						AppMain.cpp )
 
 set  (HEADER_FILES		
@@ -16,6 +17,7 @@ set  (HEADER_FILES
 						ImageHelper.h
 						DLT.h
 						Points.h
+						GaussNewton.h
 						RansacDLT.h
 						)
 

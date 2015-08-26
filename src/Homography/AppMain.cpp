@@ -4,6 +4,7 @@
 #include "DLT.h"
 #include "Points.h"
 #include "RansacDLT.h"
+#include "GaussNewton.h"
 
 
 
@@ -59,21 +60,21 @@ static int runProgramReadingPointsFile(	const std::pair<std::string, std::string
 	}
 
 
-	DLT& dltConsensus = RansacDLT::solve(points);
+	DLT& dltRansac = RansacDLT::solve(points);
 
 	std::cerr
 		<< std::fixed << std::endl
 		<< "[Info]  DLT RANSAC           : " << std::endl
-		<< "[Info]  Projection Error     : " << dltConsensus.getError().first << ", " << dltConsensus.getError().second << std::endl
-		<< "[Info]  Inliers Count        : " << dltConsensus.getInliersCount() << " of " << points.count() << std::endl
-		<< "[Info]  Inliers Percentage   : " << double(dltConsensus.getInliersCount()) / double(points.count()) * 100.0 << "%"
+		<< "[Info]  Projection Error     : " << dltRansac.getError().first << ", " << dltRansac.getError().second << std::endl
+		<< "[Info]  Inliers Count        : " << dltRansac.getInliersCount() << " of " << points.count() << std::endl
+		<< "[Info]  Inliers Percentage   : " << double(dltRansac.getInliersCount()) / double(points.count()) * 100.0 << "%"
 		<< std::endl << std::endl;
 
 
 	// Recomputing DLT from inliers.
 	// This is useful for distribution of the error between the inliers
 	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> inliers_pts;
-	DLT::getInliers(points.getPointArray(), dltConsensus.getH(), inliers_pts);
+	DLT::getInliers(points.getPointArray(), dltRansac.getH(), inliers_pts);
 	DLT dltInliers(inliers_pts);
 	dltInliers.computeHomography();
 	dltInliers.computeGeometricError();
@@ -88,15 +89,35 @@ static int runProgramReadingPointsFile(	const std::pair<std::string, std::string
 		<< std::endl << std::endl;
 
 
+	
+
+	DLT& dlt = dltRansac; 
+				//dltInliers;
+
+	double original_error = GaussNewton::getSumError(dlt.getPoints(), dlt.getH());
+	Eigen::MatrixXd Hgn;
+	double gauss_newton_error = GaussNewton::solve(dlt.getPoints(), dlt.getH(), 10, Hgn);
+
+
+	
+	std::cout
+		<< std::fixed << std::endl
+		<< "[Info]  H Inliers: " << std::endl << dltRansac.getH() << std::endl << std::endl
+		<< "[Info]  H Ransac: " << std::endl << dltInliers.getH() << std::endl << std::endl
+		<< "[Info]  H Gauss Newton: " << std::endl << Hgn << std::endl << std::endl;
+
 
 	image.first.load(inputImageFileName.first.c_str());
 	image.second.load(inputImageFileName.second.c_str());
+
 	
-	//projectImages(dltConsensus.getH(), image, outputImage);
+	projectImages(dltRansac.getH(), image, outputImage);
+	outputImage.save("out_dlt_ransac.png");
 	projectImages(dltInliers.getH(), image, outputImage);
-
-
-	outputImage.save(outputFileName.c_str());
+	outputImage.save("out_dlt_inliers.png");
+	projectImages(Hgn, image, outputImage);
+	outputImage.save("out_gauss_newton.png");
+	
 
 	return EXIT_SUCCESS;
 }
@@ -130,7 +151,7 @@ static int runProgramGeneratingMatchingPoints(const std::vector<std::string>& im
 		//std::cout << "[Info]  Press ESC to close window and continue program" << std::endl;
 
 
-		std::string outputImageFileName(imageFiles.back());
+		const std::string outputImageFileName(imageFiles.back());
 		std::string pointsFile = "surf_pts.txt";
 
 
@@ -149,21 +170,21 @@ static int runProgramGeneratingMatchingPoints(const std::vector<std::string>& im
 		}
 
 
-		DLT& dltConsensus = RansacDLT::solve(points);
+		DLT& dltRansac = RansacDLT::solve(points);
 
 		std::cerr
 			<< std::fixed << std::endl
 			<< "[Info]  DLT RANSAC           : " << std::endl
-			<< "[Info]  Projection Error     : " << dltConsensus.getError().first << ", " << dltConsensus.getError().second << std::endl
-			<< "[Info]  Inliers Count        : " << dltConsensus.getInliersCount() << " of " << points.count() << std::endl
-			<< "[Info]  Inliers Percentage   : " << double(dltConsensus.getInliersCount()) / double(points.count()) * 100.0 << "%"
+			<< "[Info]  Projection Error     : " << dltRansac.getError().first << ", " << dltRansac.getError().second << std::endl
+			<< "[Info]  Inliers Count        : " << dltRansac.getInliersCount() << " of " << points.count() << std::endl
+			<< "[Info]  Inliers Percentage   : " << double(dltRansac.getInliersCount()) / double(points.count()) * 100.0 << "%"
 			<< std::endl << std::endl;
 		
 		
 		// Recomputing DLT from inliers.
 		// This is useful for distribution of the error between the inliers
 		std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> inliers_pts;
-		DLT::getInliers(points.getPointArray(), dltConsensus.getH(), inliers_pts);
+		DLT::getInliers(points.getPointArray(), dltRansac.getH(), inliers_pts);
 		DLT dltInliers(inliers_pts);
 		dltInliers.computeHomography();
 		dltInliers.computeGeometricError();
@@ -177,19 +198,53 @@ static int runProgramGeneratingMatchingPoints(const std::vector<std::string>& im
 			<< "[Info]  Inliers Percentage   : " << double(dltInliers.getInliersCount()) / double(points.count()) * 100.0 << "%"
 			<< std::endl << std::endl;
 
+#if 1
+
+		//
+		// Non Linear step : Gauss Newton
+		// 
+		DLT& dlt = dltRansac;	//dltInliers;
+
+		double original_error = GaussNewton::getSumError(dlt.getPoints(), dlt.getH());
+		Eigen::MatrixXd Hgn;
+		double gauss_newton_error = GaussNewton::solve(dlt.getPoints(), dlt.getH(), 10, Hgn);
+
+
+
+		std::cout
+			<< std::fixed << std::endl
+			<< "[Info]  H Inliers: " << std::endl << dltRansac.getH() << std::endl << std::endl
+			<< "[Info]  H Ransac: " << std::endl << dltInliers.getH() << std::endl << std::endl
+			<< "[Info]  H Gauss Newton: " << std::endl << Hgn << std::endl << std::endl;
 
 
 		image.first.load(inputImageFileName.first.c_str());
 		image.second.load(inputImageFileName.second.c_str());
 
-		//projectImages(dltConsensus.getH(), image, outputImage);
+		
+		projectImages(dltRansac.getH(), image, outputImage);
+		outputImage.save("out_dlt_ransac_" + QString::number(i) + ".png");
+		projectImages(dltInliers.getH(), image, outputImage);
+		outputImage.save("out_dlt_inliers_" + QString::number(i) + ".png");
+		projectImages(Hgn, image, outputImage);
+		outputImage.save("out_gauss_newton_" + QString::number(i) + ".png");
+#else
+
+
+		image.first.load(inputImageFileName.first.c_str());
+		image.second.load(inputImageFileName.second.c_str());
+
+		//projectImages(dltRansac.getH(), image, outputImage);
 		projectImages(dltInliers.getH(), image, outputImage);
 
 		outputImage.save(outputImageFileName.c_str());
 
+		
+#endif
 		inputImageFileName.first = imageFiles.back();
-
 	}
+
+	
 	
 	return EXIT_SUCCESS;
 }
