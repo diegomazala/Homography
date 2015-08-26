@@ -257,9 +257,9 @@ int main(int argc, char* argv[])
 		std::cout << "[Error] Missing parameters " << std::endl;
 		std::cout << "[Usage] App.exe InputImageFileNameLeft.png InputImageFileNameRight.png PointsFile.txt OutputImageFileName.png" << std::endl;
 		std::cout << "[Usage] App.exe ImageLeft.png ImageCenterRight.png ImageRight.png OutputImageFileName.png" << std::endl;
-		std::cout << "[Usage] ./Homography.exe ../../data/pier/1.jpg ../../data/pier/2.jpg ../../data/pier/3.jpg ../../data/out.png" << std::endl;
-		std::cout << "[Usage] ./Homography.exe ../../data/pier/1.jpg ../../data/pier/2.jpg ../../data/results/pier12.txt ../../data/results/pier12.png" << std::endl;
-		std::cout << "[Usage] ./Homography.exe ../../data/results/pier12.png ../../data/pier/3.jpg ../../data/results/pier123.txt ../../data/results/pier123.png" << std::endl;
+		std::cout << "[Usage] ./Mosaic.exe ../../data/pier/1.jpg ../../data/pier/2.jpg ../../data/pier/3.jpg ../../data/out.png" << std::endl;
+		std::cout << "[Usage] ./Mosaic.exe ../../data/pier/1.jpg ../../data/pier/2.jpg ../../data/results/pier12.txt ../../data/results/pier12.png" << std::endl;
+		std::cout << "[Usage] ./Mosaic.exe ../../data/results/pier12.png ../../data/pier/3.jpg ../../data/results/pier123.txt ../../data/results/pier123.png" << std::endl;
 		return EXIT_FAILURE;
 	}
 
@@ -275,7 +275,9 @@ int main(int argc, char* argv[])
 	{
 		std::string str = argv[i];
 
-		if (str.find(".png") != std::string::npos || str.find(".jpg") != std::string::npos || str.find(".bmp") != std::string::npos)
+		if (str.find(".png") != std::string::npos || str.find(".PNG") != std::string::npos ||
+			str.find(".jpg") != std::string::npos || str.find(".JPG") != std::string::npos ||
+			str.find(".bmp") != std::string::npos || str.find(".BMP") != std::string::npos)
 			imageFiles.push_back(str);
 
 		if (str.find(".txt") != std::string::npos)
