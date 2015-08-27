@@ -4,6 +4,7 @@ include_directories (${HOMOGRAPHY_SOURCE_DIR})
 
 add_subdirectory (Homography)
 add_subdirectory (Mosaic)
+add_subdirectory (Reconstruction3D)
 add_subdirectory (SurfOpenCV)
 add_subdirectory (TestNonLinear)
 
