@@ -173,8 +173,7 @@ int main(int argc, char* argv[])
 
     UMat img1, img2;
 
-	std::string outpath = argv[3];
-		//"result_surf.png";
+	std::string outpath = "result_surf.png";
 		//cmd.get<std::string>("o");
 
 	std::string leftName = argv[1];
