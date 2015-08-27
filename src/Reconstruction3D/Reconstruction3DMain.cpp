@@ -115,10 +115,21 @@ int main(int argc, char* argv[])
 	//
 	Eigen::MatrixXd F = DLT::denormalizeH(Fn, T);
 
+
+
 	std::cout
 		<< std::endl << std::fixed
 		<< "F: " << std::endl
 		<< F << std::endl << std::endl;
+
+
+	F = Reconstruction3D::applyRestrictionToF(F);
+
+	std::cout
+		<< std::endl << std::fixed
+		<< "F restricted: " << std::endl
+		<< F << std::endl << std::endl;
+
 
 	//QImageWidget outputWidget;
 	//outputWidget.setImage(outputImage);
