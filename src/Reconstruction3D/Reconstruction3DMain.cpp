@@ -67,10 +67,25 @@ int main(int argc, char* argv[])
 		< / MLRaster>
 #endif
 
+	//
+	// K matrix
+	//
+	std::pair<Eigen::Matrix3d, Eigen::Matrix3d> K(Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero());
+	K.first(0, 0) = K.first(1, 1) = 114.873 * 0.0130887;
+	K.first(0, 2) = 1936;
+	K.first(1, 2) = 1296;
+	K.second = K.first;
+
+	//
+	// R matrix
+	//
 	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> R(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
 	R.first << 0.980106, -0.0199563, 0.197469, 0, 0.0558328, 0.982476, -0.177828, 0, -0.190459, 0.185315, 0.964045, 0, 0, 0, 0, 1;
 	R.second << 0.914099, -0.0148061, -0.40522, 0, -0.0540653, 0.98596, -0.157987, 0, 0.401869, 0.166324, 0.900465, 0, 0, 0, 0, 1;
 
+	//
+	// t vector
+	//
 	std::pair<Eigen::Vector3d, Eigen::Vector3d> t;
 	t.first << 79.3959, -114.356, -499.541;
 	t.second << -227.173, -103.559, -460.851;
