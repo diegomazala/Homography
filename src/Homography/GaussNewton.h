@@ -29,7 +29,7 @@ public:
 								const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& hp);
 
 
-	static Eigen::MatrixXd buildMatrixJ(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts);
+	static Eigen::MatrixXd buildMatrixJ(const std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>>& pts);
 
 	
 	static Eigen::VectorXd buildFx(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, 

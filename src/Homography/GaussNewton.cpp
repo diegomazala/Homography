@@ -57,10 +57,10 @@ double GaussNewton::solve(	const std::vector<std::pair<Eigen::Vector2d, Eigen::V
 Eigen::MatrixXd GaussNewton::computeDeltaH(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, 
 											const Eigen::MatrixXd& H)
 {
-	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> hp;
+	std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> hp;
 	Points::projectPoints(pts, hp, H);
 
-	Eigen::MatrixXd J = GaussNewton::buildMatrixJ(pts);
+	Eigen::MatrixXd J = GaussNewton::buildMatrixJ(hp);
 
 	Eigen::MatrixXd A = J.transpose() * J;
 
@@ -130,7 +130,9 @@ double GaussNewton::getSumError(const std::vector<std::pair<Eigen::Vector2d, Eig
 
 
 
-Eigen::MatrixXd GaussNewton::buildMatrixJ(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts)
+
+
+Eigen::MatrixXd GaussNewton::buildMatrixJ(const std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>>& pts)
 {
 	int i = 0;
 	Eigen::MatrixXd J(2 * pts.size(), 9);		// 8 x 9, 2n x 9
@@ -139,26 +141,28 @@ Eigen::MatrixXd GaussNewton::buildMatrixJ(const std::vector<std::pair<Eigen::Vec
 	{
 		J(i, 0) = p.first.x();
 		J(i, 1) = p.first.y();
-		J(i, 2) = 1.0;
+		J(i, 2) = p.first.z();
 		J(i, 3) = 0.0;
 		J(i, 4) = 0.0;
 		J(i, 5) = 0.0;
 		J(i, 6) = -p.second.x() * p.first.x();
 		J(i, 7) = -p.second.x() * p.first.y();
-		J(i, 8) = -p.second.x();
+		J(i, 8) = -p.second.x() * p.first.z();
+		J(i)   *= (1.0 / p.second.z());
 		++i;
 		J(i, 0) = 0.0;
 		J(i, 1) = 0.0;
 		J(i, 2) = 0.0;
 		J(i, 3) = p.first.x();
 		J(i, 4) = p.first.y();
-		J(i, 5) = 1.0;
+		J(i, 5) = p.first.z();
 		J(i, 6) = -p.second.y() * p.first.x();
 		J(i, 7) = -p.second.y() * p.first.y();
-		J(i, 8) = -p.second.y();
+		J(i, 8) = -p.second.y() * p.first.z();
+		J(i)   *= (1.0 / p.second.z());
 		++i;
 	}
-	
+
 	return J;
 }
 

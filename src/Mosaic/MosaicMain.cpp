@@ -143,6 +143,7 @@ static int runProgramGeneratingMatchingPoints(const std::vector<std::string>& im
 		std::cout << std::endl << cmd.str() << std::endl << std::endl;
 		std::cout << "[Info]  Wait. Looking for matching points ... " << std::endl << std::endl;
 
+		std::cout << "Commnad: " << cmd.str() << std::endl;
 		system(cmd.str().c_str());
 		
 		std::cout 
@@ -236,11 +237,8 @@ static int runProgramGeneratingMatchingPoints(const std::vector<std::string>& im
 
 		//projectImages(dltRansac.getH(), image, outputImage);
 		projectImages(dltInliers.getH(), image, outputImage);
-
-		outputImage.save(outputImageFileName.c_str());
-
-		
 #endif
+		outputImage.save(outputImageFileName.c_str());
 		inputImageFileName.first = imageFiles.back();
 	}
 
