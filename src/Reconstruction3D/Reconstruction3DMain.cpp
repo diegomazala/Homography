@@ -83,6 +83,7 @@ int main(int argc, char* argv[])
 	R.first << 0.980106, -0.0199563, 0.197469, 0, 0.0558328, 0.982476, -0.177828, 0, -0.190459, 0.185315, 0.964045, 0, 0, 0, 0, 1;
 	R.second << 0.914099, -0.0148061, -0.40522, 0, -0.0540653, 0.98596, -0.157987, 0, 0.401869, 0.166324, 0.900465, 0, 0, 0, 0, 1;
 
+
 	//
 	// t vector
 	//
@@ -90,6 +91,21 @@ int main(int argc, char* argv[])
 	t.first << 79.3959, -114.356, -499.541;
 	t.second << -227.173, -103.559, -460.851;
 
+	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Rt(R.first, R.second);
+	Rt.first.col(3) = t.first;
+	Rt.second.col(3) = t.second;
+
+
+
+	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> P;
+	P.first = K.first * Rt.first;
+	P.second = K.second * Rt.second;
+
+	std::cout << "K: " << std::endl << K.first << std::endl << std::endl;
+	std::cout << "R: " << std::endl << R.first << std::endl << std::endl;
+	std::cout << "t: " << std::endl << t.first << std::endl << std::endl;
+	std::cout << "Rt: " << std::endl << Rt.first << std::endl << std::endl;
+	std::cout << "P: " << std::endl << P.first << std::endl << std::endl;
 
 	std::pair<QImage, QImage> image;
 	QImage outputImage;
@@ -121,8 +137,18 @@ int main(int argc, char* argv[])
 	//
 	// Compute F matrix
 	//
-	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points(pointsNorm.begin(), pointsNorm.begin() + 7);
+	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points(pointsNorm.begin(), pointsNorm.begin() + 8);
 	Eigen::MatrixXd Fn = Reconstruction3D::computeF(points);
+
+
+	
+	std::cout
+		<< std::endl << std::fixed
+		<< "F normalized: " << std::endl
+		<< Fn << std::endl << std::endl;
+
+
+	Fn = Reconstruction3D::applyRestriction(Fn);
 
 
 	// 
@@ -131,19 +157,19 @@ int main(int argc, char* argv[])
 	Eigen::MatrixXd F = DLT::denormalizeH(Fn, T);
 
 
-
 	std::cout
 		<< std::endl << std::fixed
-		<< "F: " << std::endl
+		<< "F restricted and denormalized: " << std::endl
 		<< F << std::endl << std::endl;
 
 
-	F = Reconstruction3D::applyRestrictionToF(F);
+	//F /= F(2, 2);
+	//std::cout
+	//	<< std::endl << std::fixed
+	//	<< "F restricted, denormalized and normalized by F(2,2): " << std::endl
+	//	<< F << std::endl << std::endl;
 
-	std::cout
-		<< std::endl << std::fixed
-		<< "F restricted: " << std::endl
-		<< F << std::endl << std::endl;
+
 
 
 	//QImageWidget outputWidget;
