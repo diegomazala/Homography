@@ -10,7 +10,8 @@ set  (SOURCE_FILES
 						Points.cpp
 						RansacDLT.cpp
 						GaussNewton.cpp
-						Reconstruction3D.cpp )
+						Reconstruction3D.cpp 
+						Triangulation.cpp)
 
 set  (HEADER_FILES		
 						QImageWidget.h
@@ -19,7 +20,8 @@ set  (HEADER_FILES
 						Points.h
 						GaussNewton.h
 						RansacDLT.h
-						Reconstruction3D.h)
+						Reconstruction3D.h
+						Triangulation.h)
 
 
 include_directories (${CMAKE_SOURCE_DIR})

@@ -4,9 +4,26 @@
 #include "Points.h"
 #include "DLT.h"
 #include "Reconstruction3D.h"
+#include <fstream>
 
 
+void writeObjFile(const std::string& filename, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::Matrix3d& mat)
+{
+	std::ofstream file;
+	file.open(filename);
+	
+	for (const auto p : pts)
+	{
+		const auto& x0 = p.first.homogeneous();
+		const auto& x1 = p.second.homogeneous();
+		auto X1 = mat * x1;
+		file << "v " << X1.transpose() << std::endl;
+		auto X0 = mat * x0;
+		file << "v " << X0.transpose() << std::endl;
+	}
 
+	file.close();
+}
 
 int main(int argc, char* argv[])
 {
@@ -101,11 +118,11 @@ int main(int argc, char* argv[])
 	P.first = K.first * Rt.first;
 	P.second = K.second * Rt.second;
 
-	std::cout << "K: " << std::endl << K.first << std::endl << std::endl;
-	std::cout << "R: " << std::endl << R.first << std::endl << std::endl;
-	std::cout << "t: " << std::endl << t.first << std::endl << std::endl;
+	std::cout << "K : " << std::endl << K.first << std::endl << std::endl;
+	std::cout << "R : " << std::endl << R.first << std::endl << std::endl;
+	std::cout << "t : " << std::endl << t.first << std::endl << std::endl;
 	std::cout << "Rt: " << std::endl << Rt.first << std::endl << std::endl;
-	std::cout << "P: " << std::endl << P.first << std::endl << std::endl;
+	std::cout << "P : " << std::endl << P.first << std::endl << std::endl;
 
 	std::pair<QImage, QImage> image;
 	QImage outputImage;
@@ -132,46 +149,60 @@ int main(int argc, char* argv[])
 	// 
 	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> pointsNorm;
 	std::pair<Eigen::Matrix3d, Eigen::Matrix3d> T = DLT::normalizePoints(pointsSrc, pointsNorm);
-	
+	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points(pointsNorm.begin(), pointsNorm.begin() + 8);
 
+
+
+	///////////////////////////////////////////////////////////////////////////////////////
 	//
 	// Compute F matrix
 	//
-	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points(pointsNorm.begin(), pointsNorm.begin() + 8);
 	Eigen::MatrixXd Fn = Reconstruction3D::computeF(points);
-
-
 	
 	std::cout
 		<< std::endl << std::fixed
 		<< "F normalized: " << std::endl
 		<< Fn << std::endl << std::endl;
-
-
-	Fn = Reconstruction3D::applyRestriction(Fn);
-
+	Fn = Reconstruction3D::applyConstraint(Fn);
 
 	// 
 	// Denormalize F matrix
 	//
 	Eigen::MatrixXd F = DLT::denormalizeH(Fn, T);
-
-
+	
 	std::cout
 		<< std::endl << std::fixed
-		<< "F restricted and denormalized: " << std::endl
+		<< "F constrained and denormalized: " << std::endl
 		<< F << std::endl << std::endl;
 
-
-	//F /= F(2, 2);
+	F /= F(2, 2);
 	//std::cout
 	//	<< std::endl << std::fixed
 	//	<< "F restricted, denormalized and normalized by F(2,2): " << std::endl
 	//	<< F << std::endl << std::endl;
+	//
+	/////////////////////////////////////////////////////////////////////////////////////// 
+
+	
+
+	Eigen::MatrixXd E = Reconstruction3D::computeE(K.first, F);
 
 
 
+	///////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Compute P matrix
+	//
+	Eigen::MatrixXd Pmat = Reconstruction3D::computeP(points, E);
 
+	std::cout
+		<< std::endl << std::fixed
+		<< "Pmat: " << std::endl
+		<< Pmat << std::endl << std::endl;
+
+
+	writeObjFile("../../data/pts.obj", pointsNorm, Pmat.inverse());
+	
 	//QImageWidget outputWidget;
 	//outputWidget.setImage(outputImage);
 	//outputWidget.show();

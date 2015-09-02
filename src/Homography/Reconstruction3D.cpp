@@ -1,4 +1,5 @@
 #include "Reconstruction3D.h"
+#include "Triangulation.h"
 #include <iostream>
 #include <limits>
 #include <iomanip>
@@ -29,7 +30,7 @@ Eigen::MatrixXd Reconstruction3D::buildMatrixA(const std::vector<std::pair<Eigen
 
 
 
-Eigen::MatrixXd Reconstruction3D::applyRestriction(const Eigen::MatrixXd& F)
+Eigen::MatrixXd Reconstruction3D::applyConstraint(const Eigen::MatrixXd& F)
 {
 	//Eigen::JacobiSVD<Eigen::MatrixXd> svd(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
 	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
@@ -38,20 +39,20 @@ Eigen::MatrixXd Reconstruction3D::applyRestriction(const Eigen::MatrixXd& F)
 	Eigen::DiagonalMatrix< double, 3, 3 > diagonal(singularValue, singularValue, 0.0);
 	//Eigen::DiagonalMatrix< double, 3, 3 > diagonal(singularValues(0), singularValues(1), 0.0);
 	Eigen::MatrixXd D = diagonal.toDenseMatrix();
-	Eigen::MatrixXd F_restricted = svd.matrixU() * D * svd.matrixV().transpose();
+	Eigen::MatrixXd constrainedMat = svd.matrixU() * D * svd.matrixV().transpose();
 
 	//std::cout << std::fixed << "U:" << std::endl << svd.matrixU() << std::endl << std::endl;
 	//std::cout << std::fixed << "D:" << std::endl << D << std::endl << std::endl;
 	//std::cout << std::fixed << "V:" << std::endl << svd.matrixV() << std::endl << std::endl;
 
 
-	//std::cout << std::fixed << "F restricted:" << std::endl << F_restricted << std::endl << std::endl;
+	//std::cout << std::fixed << "Constrained Mat:" << std::endl << constrainedMat << std::endl << std::endl;
 
 	//std::cout << std::fixed 
-	//	<< "F restricted determinant: " << F_restricted.determinant() << std::endl
+	//	<< "F restricted determinant: " << constrainedMat.determinant() << std::endl
 	//	<< "F determinant           : " << F.determinant() << std::endl << std::endl;
 
-	return F_restricted;
+	return constrainedMat;
 }
 
 
@@ -84,7 +85,7 @@ Eigen::MatrixXd Reconstruction3D::computeF(const std::vector<std::pair<Eigen::Ve
 Eigen::MatrixXd Reconstruction3D::computeE(const Eigen::MatrixXd& K, const Eigen::MatrixXd& F)
 {
 	Eigen::MatrixXd E = K.transpose() * F * K;
-	E = applyRestriction(E);
+	E = applyConstraint(E);
 	//E /= E(2, 2);
 	return E;
 }
@@ -108,14 +109,6 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 
 	Eigen::VectorXd u3 = U.col(2);
 
-	//cout << "========== P Computation =============: " << endl
-	//	<< "E: " << endl << E << endl << endl
-	//	<< "U: " << endl << U << endl << endl
-	//	<< "D: " << endl << svd.singularValues() << endl << endl
-	//	<< "Vt: " << endl << Vt << endl << endl
-	//	<< "W: " << endl << W << endl << endl
-	//	<< "u3 :" << u3 << endl << endl;
-
 	Eigen::MatrixXd P0(Eigen::MatrixXd::Identity(3, 4)); // Just K0: no translation or rotation.
 
 	Eigen::MatrixXd P1noT = U * W * Vt; // P without translation part.
@@ -124,65 +117,54 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 	P1.block(0, 0, 3, 3) = P1noT;
 	P1.block(0, 3, 3, 1) = u3;
 
-	///cout << "1st sol: " << endl;
 
 	Eigen::MatrixXd bestP1;
 	int numCorrectSolutions = 0;
-	if (checkP1(pts, P0, P1))
+	if (checkP(pts, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
-		//return P1;
 	}
 
 	P1.block(0, 3, 3, 1) = -u3;
 
-	//cout << "2nd sol: " << endl;
 
-	if (checkP1(pts, P0, P1))
+	if (checkP(pts, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
-		//return P1;
 	}
 
 	P1noT = U * W.transpose() * Vt;
 	P1.block(0, 0, 3, 3) = P1noT;
 	P1.block(0, 3, 3, 1) = u3;
 	
-	//cout << "3rd sol: " << endl;
-
-	if (checkP1(pts, P0, P1))
+	if (checkP(pts, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
-		//return P1;
 	}
 
 	P1.block(0, 3, 3, 1) = -u3;
 
-	///cout << "4th sol: " << endl;
-
-	if (checkP1(pts, P0, P1))
+	if (checkP(pts, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
-		//return P1;
 	}
-
-	//cout << "========== P Computation End ============= " << endl << endl
-	//	<< "Number of correct solutions: " << numCorrectSolutions << endl << endl;
 
 	if (numCorrectSolutions < 1) 
 		std::cerr << "[Error]   : None of the results for P1 was accepted!" << std::endl << std::endl;
-	if (numCorrectSolutions > 1) 
+	else if (numCorrectSolutions > 1) 
 		std::cerr << "[Error]   : More than one solution found" << std::endl << std::endl;
+	else
+		std::cerr << "[Info]    : Solution found for P1: \n" << bestP1 << std::endl << std::endl;
 
 	return bestP1;
 }
 
 
-bool Reconstruction3D::checkP1(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+bool Reconstruction3D::checkP(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
 								const Eigen::MatrixXd& P0, 
 								const Eigen::MatrixXd& P1)
 {
@@ -192,25 +174,21 @@ bool Reconstruction3D::checkP1(	const std::vector<std::pair<Eigen::Vector2d, Eig
 	std::vector< std::pair< Eigen::VectorXd, Eigen::VectorXd > > pair(1);
 	pair[0] = std::pair< Eigen::VectorXd, Eigen::VectorXd >(p0, p1);
 
-#if 0 // TODO
-	TriangulationDlt dlt(pair, P0, P1);
-	dlt.solve();
-	VectorXd point3D = dlt.getPoint3D();
 
-	VectorXd reprojectedImg0 = P0 * point3D;
-	VectorXd reprojectedImg1 = P1 * point3D;
+	Triangulation triangulation(std::make_pair(P0, P1), pts[0]);
+	Eigen::Vector3d X = triangulation.solve();
 
-	cout << "========== P1 Check =============: " << endl
-		<< "P0:" << endl << P0 << endl << endl
-		<< "P1:" << endl << P1 << endl << endl
-		<< "x: " << endl << p0 << endl << endl
-		<< "x': " << endl << p1 << endl << endl
-		<< "3d point: " << endl << point3D << endl << endl
-		<< "Reprojected x: " << endl << reprojectedImg0 << endl << endl
-		<< "Reprojected x': " << endl << reprojectedImg1 << endl << endl
-		<< "========== P1 Check End =============: " << endl << endl;
+	Eigen::VectorXd x0 = P0 * X;
+	Eigen::VectorXd x1 = P1 * X;
 
-	return reprojectedImg0[2] > 0. && reprojectedImg1[2] > 0.;
-#endif
-	return false;
+	return (x0.z() > 0.0) && (x1.z() > 0.0);
 }
+
+
+
+
+Eigen::VectorXd Reconstruction3D::triangulation(const Eigen::MatrixXd& P0, const Eigen::MatrixXd& P1, const Eigen::VectorXd& p0, const Eigen::VectorXd& p1)
+{
+	return Eigen::Vector3d();
+}
+

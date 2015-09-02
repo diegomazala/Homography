@@ -11,7 +11,7 @@ public:
 	
 	static Eigen::MatrixXd buildMatrixA(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts);
 
-	static Eigen::MatrixXd applyRestriction(const Eigen::MatrixXd& F);
+	static Eigen::MatrixXd applyConstraint(const Eigen::MatrixXd& F);
 
 	static Eigen::MatrixXd computeF(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts);
 	
@@ -20,9 +20,15 @@ public:
 	static Eigen::MatrixXd computeP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
 									const Eigen::MatrixXd& E);
 
-	static bool checkP1(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+	static bool checkP(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
 						const Eigen::MatrixXd& P0,
 						const Eigen::MatrixXd& P1);
+
+	static Eigen::VectorXd triangulation(
+										const Eigen::MatrixXd& P0,
+										const Eigen::MatrixXd& P1,
+										const Eigen::VectorXd& p0,
+										const Eigen::VectorXd& p1);
 };
 
 
