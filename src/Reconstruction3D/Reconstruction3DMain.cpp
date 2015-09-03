@@ -31,7 +31,7 @@ bool testObjPoints(const std::string& filename_in, const std::string& filename_o
 
 		if (!std::getline(inFile, str))
 		{
-			std::cerr << "Error: Could read obj input file: " << filename_in << std::endl;
+			std::cerr << "Error: Problens when reading obj file: " << filename_in << std::endl;
 			return false;
 		}
 
@@ -51,8 +51,8 @@ bool testObjPoints(const std::string& filename_in, const std::string& filename_o
 			outFile << "v " << pt.transpose() << std::endl;
 		}
 
-		//if (i++ == 200)
-		//	break;
+		if (i++ == 25000)
+			break;
 	}
 
 	inFile.close();
@@ -156,27 +156,34 @@ int main(int argc, char* argv[])
 	// K matrix
 	//
 	std::pair<Eigen::Matrix3d, Eigen::Matrix3d> K(Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero());
+#if 0 // pixel unit measure
 	K.first(0, 0) = K.first(1, 1) = 114.873 / 0.0130887;
 	K.first(0, 2) = 1936;
 	K.first(1, 2) = 1296;
+	K.first(2, 2) = 1.0;
+#else	// mm unit measure
+	K.first(0, 0) = K.first(1, 1) = 114.873;
+	K.first(0, 2) = 1936 * 0.0130887;
+	K.first(1, 2) = 1296 * 0.0130887;
+	K.first(2, 2) = 1.0;
+#endif
 	K.second = K.first;
+
 
 	//
 	// R matrix
 	//
-	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> R(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
+	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> R(Eigen::MatrixXd(3, 3), Eigen::MatrixXd(3, 3));
 	
-	R.first << 
-		0.980106,  -0.0199563,	0.197469,	0, 
-		0.0558328,	0.982476,	-0.177828,	0, 
-		-0.190459,	0.185315,	0.964045,	0, 
-		0,			0,			0,			1;
+	R.first <<
+		0.980106, -0.0199563, 0.197469,
+		0.0558328, 0.982476, -0.177828,
+		-0.190459, 0.185315, 0.964045;
 	
 	R.second << 
-		0.914099,	-0.0148061, -0.40522,	0, 
-		-0.0540653,	0.98596,	-0.157987,	0, 
-		0.401869,	0.166324,	0.900465,	0, 
-		0,			0,			0,			1;
+		0.914099,	-0.0148061, -0.40522,
+		-0.0540653,	0.98596,	-0.157987,
+		0.401869,	0.166324,	0.900465;
 
 
 	//
@@ -186,22 +193,31 @@ int main(int argc, char* argv[])
 	t.first << 79.3959, -114.356, -499.541;
 	t.second << -227.173, -103.559, -460.851;
 
-	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Rt(-R.first, -R.second);
-	Rt.first.col(3) = t.first;
-	Rt.second.col(3) = t.second;
-
-
+	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Rt(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
+	Rt.first.block(0, 0, 3, 3)  = R.first;
+	Rt.second.block(0, 0, 3, 3) = R.second;
+	Rt.first.col(3)  = -R.first * t.first;
+	Rt.second.col(3) = -R.second * t.second;
 
 	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> P;
-	P.first = K.first * Rt.first;
-	P.second = K.second * Rt.second;
+	P.first = K.first * R.first;
+	P.second = K.second * R.second;
 
-	std::cout << "K : " << std::endl << K.first << std::endl << std::endl;
-	std::cout << "R : " << std::endl << R.first << std::endl << std::endl;
-	std::cout << "t : " << std::endl << t.first << std::endl << std::endl;
-	std::cout << "Rt: " << std::endl << Rt.first << std::endl << std::endl;
-	std::cout << "P : " << std::endl << P.first << std::endl << std::endl;
+	std::cout << "K1 : " << std::endl << K.first << std::endl << std::endl;
+	std::cout << "K2 : " << std::endl << K.second << std::endl << std::endl;
+	std::cout << "R1 : " << std::endl << R.first << std::endl << std::endl;
+	std::cout << "R2 : " << std::endl << R.second << std::endl << std::endl;
+	std::cout << "t1 : " << std::endl << t.first << std::endl << std::endl;
+	std::cout << "t2 : " << std::endl << t.second << std::endl << std::endl;
+	std::cout << "Rt1: " << std::endl << Rt.first << std::endl << std::endl;
+	std::cout << "Rt2: " << std::endl << Rt.second << std::endl << std::endl;
+	std::cout << "P1 : " << std::endl << P.first << std::endl << std::endl;
+	std::cout << "P2 : " << std::endl << P.second << std::endl << std::endl;
 
+
+	testObjPoints("../../data/thai-lion/thai-lion.obj", "../../data/proj1.obj", P.first);
+	testObjPoints("../../data/thai-lion/thai-lion.obj", "../../data/proj2.obj", P.second);
+	return 0;
 
 	
 
@@ -233,9 +249,6 @@ int main(int argc, char* argv[])
 	{
 		std::cout << pt->first.transpose() << "   " << pt->second.transpose() << std::endl;
 	}
-
-
-	//testObjPoints("../../data/thai-lion/thai-lion.obj", "../../data/proj.obj", K.first);
 
 	
 
@@ -272,7 +285,7 @@ int main(int argc, char* argv[])
 	/////////////////////////////////////////////////////////////////////////////////////// 
 
 
-	Eigen::MatrixXd E = Reconstruction3D::computeE(K.first, Fn);
+	Eigen::MatrixXd E = Reconstruction3D::computeE(K.first, F);
 	std::cout
 		<< std::endl << std::fixed
 		<< "E: " << std::endl
@@ -284,7 +297,7 @@ int main(int argc, char* argv[])
 	// Compute P matrix
 	//
 	Eigen::MatrixXd Pmat = Reconstruction3D::computeP(points, E);
-	Pmat /= Pmat(2, 2);
+	//Pmat /= Pmat(2, 2);
 	//std::cout
 	//	<< std::endl << std::fixed
 	//	<< "P0: " << std::endl
