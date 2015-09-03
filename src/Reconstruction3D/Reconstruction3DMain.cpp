@@ -8,6 +8,7 @@
 #include <fstream>
 
 
+
 bool testObjPoints(const std::string& filename_in, const std::string& filename_out, const Eigen::MatrixXd& mat)
 {
 	std::ifstream inFile;
@@ -155,7 +156,7 @@ int main(int argc, char* argv[])
 	// K matrix
 	//
 	std::pair<Eigen::Matrix3d, Eigen::Matrix3d> K(Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero());
-	K.first(0, 0) = K.first(1, 1) = 114.873;// *0.0130887;
+	K.first(0, 0) = K.first(1, 1) = 114.873 / 0.0130887;
 	K.first(0, 2) = 1936;
 	K.first(1, 2) = 1296;
 	K.second = K.first;
@@ -164,8 +165,18 @@ int main(int argc, char* argv[])
 	// R matrix
 	//
 	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> R(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
-	R.first << 0.980106, -0.0199563, 0.197469, 0, 0.0558328, 0.982476, -0.177828, 0, -0.190459, 0.185315, 0.964045, 0, 0, 0, 0, 1;
-	R.second << 0.914099, -0.0148061, -0.40522, 0, -0.0540653, 0.98596, -0.157987, 0, 0.401869, 0.166324, 0.900465, 0, 0, 0, 0, 1;
+	
+	R.first << 
+		0.980106,  -0.0199563,	0.197469,	0, 
+		0.0558328,	0.982476,	-0.177828,	0, 
+		-0.190459,	0.185315,	0.964045,	0, 
+		0,			0,			0,			1;
+	
+	R.second << 
+		0.914099,	-0.0148061, -0.40522,	0, 
+		-0.0540653,	0.98596,	-0.157987,	0, 
+		0.401869,	0.166324,	0.900465,	0, 
+		0,			0,			0,			1;
 
 
 	//
@@ -175,7 +186,7 @@ int main(int argc, char* argv[])
 	t.first << 79.3959, -114.356, -499.541;
 	t.second << -227.173, -103.559, -460.851;
 
-	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Rt(R.first, R.second);
+	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Rt(-R.first, -R.second);
 	Rt.first.col(3) = t.first;
 	Rt.second.col(3) = t.second;
 
@@ -191,8 +202,8 @@ int main(int argc, char* argv[])
 	std::cout << "Rt: " << std::endl << Rt.first << std::endl << std::endl;
 	std::cout << "P : " << std::endl << P.first << std::endl << std::endl;
 
-	std::pair<QImage, QImage> image;
-	QImage outputImage;
+
+	
 
 
 	//
@@ -218,7 +229,15 @@ int main(int argc, char* argv[])
 	std::pair<Eigen::Matrix3d, Eigen::Matrix3d> T = DLT::normalizePoints(pointsSrc, pointsNorm);
 	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points(pointsNorm.begin(), pointsNorm.begin() + 8);
 
+	for (auto pt = pointsSrc.begin(); pt < pointsSrc.begin() + 8; ++pt)
+	{
+		std::cout << pt->first.transpose() << "   " << pt->second.transpose() << std::endl;
+	}
 
+
+	//testObjPoints("../../data/thai-lion/thai-lion.obj", "../../data/proj.obj", K.first);
+
+	
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	//
@@ -253,38 +272,11 @@ int main(int argc, char* argv[])
 	/////////////////////////////////////////////////////////////////////////////////////// 
 
 
-
-
-	std::cout << "=======================================================" << std::endl;
-
-	Eigen::Matrix3d e = Reconstruction3D::computeEpipoleMat(F);
+	Eigen::MatrixXd E = Reconstruction3D::computeE(K.first, Fn);
 	std::cout
 		<< std::endl << std::fixed
-		<< "epipole: " << std::endl
-		<< e << std::endl << std::endl;
-
-	P.first.setIdentity();
-	P.second = Reconstruction3D::computeP(F, e);
-
-	std::cout
-		<< std::endl << std::fixed
-		<< "P: " << std::endl
-		<< P.first << std::endl << std::endl
-		<< P.second << std::endl << std::endl;
-
-	//K.first = K.second = Reconstruction3D::computeK(F);
-	//
-	//std::cout
-	//	<< std::endl << std::fixed
-	//	<< "K: " << std::endl
-	//	<< K.first << std::endl << std::endl;
-
-	std::cout << "=======================================================" << std::endl;
-
-	return 0;
-
-	Eigen::MatrixXd E = Reconstruction3D::computeE(K.first, F);
-
+		<< "E: " << std::endl
+		<< E << std::endl << std::endl;
 	
 
 	///////////////////////////////////////////////////////////////////////////////////////
@@ -310,27 +302,21 @@ int main(int argc, char* argv[])
 		<< Pmat << std::endl << std::endl;
 	
 
-	//writeObjFile("../../data/pts.obj", pointsSrc, Pmat);
+	writeObjFile("../../data/ptsSrc_Pmat.obj", pointsSrc, Pmat);
 	//P.first.setIdentity();
 	//P.second = Pmat;
-	//writePointsObjFiles("../../data/pts.obj", pointsNorm, P);// std::make_pair(Pmat, Pmat));
+	writeObjFile("../../data/ptsNorm_Pmat.obj", pointsNorm, Pmat);
+	writeObjFile("../../data/ptsSrc_First.obj", pointsSrc, P.first);
+	writeObjFile("../../data/ptsSrc_Second.obj", pointsSrc, P.second);
+	writeObjFile("../../data/ptsNorm_First.obj", pointsNorm, P.first);
+	writeObjFile("../../data/ptsNorm_Second.obj", pointsNorm, P.second);
 
 
 	//testObjPoints("../../data/thai-lion/thai-lion.obj", "../../data/proj.obj", P.first);
 
 
-	std::cout << "Error: " << Reconstruction3D::computeError(points, F) << std::endl;
-	std::cout << "Error: " << Reconstruction3D::computeError(points, Fn) << std::endl << std::endl;
-
-	std::cout << "Error: " << Reconstruction3D::computeError(pointsSrc, F) << std::endl;
-	std::cout << "Error: " << Reconstruction3D::computeError(pointsSrc, Fn) << std::endl << std::endl;
-	std::cout << "Error: " << Reconstruction3D::computeError(pointsNorm, F) << std::endl;
-	std::cout << "Error: " << Reconstruction3D::computeError(pointsNorm, Fn) << std::endl << std::endl;
-
-	std::cout << "Error: " << Reconstruction3D::computeError(points, E) << std::endl;
-	std::cout << "Error: " << Reconstruction3D::computeError(pointsSrc, E) << std::endl;
-	std::cout << "Error: " << Reconstruction3D::computeError(pointsNorm, E) << std::endl;
-
+	std::cout << "Error x'Fx=0  : " << Reconstruction3D::computeError(points, F) << std::endl;
+	std::cout << "Error x'FnX=0 : " << Reconstruction3D::computeError(points, Fn) << std::endl << std::endl;
 
 	//QImageWidget outputWidget;
 	//outputWidget.setImage(outputImage);

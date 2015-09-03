@@ -30,26 +30,22 @@ Eigen::MatrixXd Reconstruction3D::buildMatrixA(const std::vector<std::pair<Eigen
 
 
 
-Eigen::MatrixXd Reconstruction3D::applyConstraint(const Eigen::MatrixXd& F)
+Eigen::MatrixXd Reconstruction3D::applyConstraint(const Eigen::MatrixXd& inputMat)
 {
 	//Eigen::JacobiSVD<Eigen::MatrixXd> svd(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
-	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
+	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(inputMat, Eigen::ComputeFullU | Eigen::ComputeFullV);
 	Eigen::VectorXd singularValues = svd.singularValues();
 	double singularValue = (singularValues[0] + singularValues[1]) * 0.5;
 	Eigen::DiagonalMatrix< double, 3, 3 > diagonal(singularValues(0), singularValues(1), 0.0);
 	Eigen::MatrixXd D = diagonal.toDenseMatrix();
 	Eigen::MatrixXd constrainedMat = svd.matrixU() * D * svd.matrixV().transpose();
 
-	//std::cout << std::fixed << "U:" << std::endl << svd.matrixU() << std::endl << std::endl;
-	//std::cout << std::fixed << "D:" << std::endl << D << std::endl << std::endl;
-	//std::cout << std::fixed << "V:" << std::endl << svd.matrixV() << std::endl << std::endl;
+	//std::cout << std::fixed << "In  Mat:" << std::endl << inputMat << std::endl << std::endl;
+	//std::cout << std::fixed << "Out Mat:" << std::endl << constrainedMat << std::endl << std::endl;
 
-
-	//std::cout << std::fixed << "Constrained Mat:" << std::endl << constrainedMat << std::endl << std::endl;
-
-	//std::cout << std::fixed 
-	//	<< "F restricted determinant: " << constrainedMat.determinant() << std::endl
-	//	<< "F determinant           : " << F.determinant() << std::endl << std::endl;
+	std::cout << std::fixed
+		<< "In  determinant : " << inputMat.determinant() << std::endl
+		<< "Out determinant : " << constrainedMat.determinant() << std::endl << std::endl;
 
 	return constrainedMat;
 }
@@ -61,8 +57,8 @@ Eigen::MatrixXd Reconstruction3D::computeF(const std::vector<std::pair<Eigen::Ve
 
 	//std::cout << std::fixed << "A:" << std::endl << A << std::endl << std::endl;
 
-	Eigen::JacobiSVD<Eigen::MatrixXd> SVD(A, Eigen::ComputeFullV);
-	Eigen::MatrixXd kernel = SVD.matrixV().col(SVD.matrixV().cols() - 1);
+	Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullV);
+	Eigen::MatrixXd kernel = svd.matrixV().col(svd.matrixV().cols() - 1);
 
 	Eigen::MatrixXd F(3, 3);
 	F(0, 0) = kernel(0);
@@ -79,13 +75,6 @@ Eigen::MatrixXd Reconstruction3D::computeF(const std::vector<std::pair<Eigen::Ve
 }
 
 
-Eigen::MatrixXd Reconstruction3D::computeK(const Eigen::MatrixXd& F)
-{
-	Eigen::Matrix3d R, Q;
-	//Reconstruction3D::RQdecomposition(P, R, Q);
-	Reconstruction3D::QRdecomposition(F, R, Q);
-	return R;
-}
 
 
 
@@ -95,6 +84,17 @@ Eigen::MatrixXd Reconstruction3D::computeE(const Eigen::MatrixXd& K, const Eigen
 	E = applyConstraint(E);
 	E /= E(2, 2);
 	return E;
+}
+
+
+
+
+Eigen::MatrixXd Reconstruction3D::computeK(const Eigen::MatrixXd& F)
+{
+	Eigen::Matrix3d R, Q;
+	//Reconstruction3D::RQdecomposition(P, R, Q);
+	Reconstruction3D::QRdecomposition(F, R, Q);
+	return R;
 }
 
 
@@ -141,8 +141,8 @@ Eigen::MatrixXd Reconstruction3D::computeP(const Eigen::MatrixXd& F, const Eigen
 }
 
 
-Eigen::MatrixXd Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
-	const Eigen::MatrixXd& E)
+Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+											const Eigen::MatrixXd& E)
 {
 	Eigen::JacobiSVD< Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner > svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
 	Eigen::MatrixXd U = svd.matrixU();
