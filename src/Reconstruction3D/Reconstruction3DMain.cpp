@@ -257,11 +257,20 @@ int main(int argc, char* argv[])
 
 	std::cout << "=======================================================" << std::endl;
 
-	Eigen::MatrixXd e = Reconstruction3D::computeEpipole(F);
+	Eigen::Matrix3d e = Reconstruction3D::computeEpipoleMat(F);
 	std::cout
 		<< std::endl << std::fixed
 		<< "epipole: " << std::endl
 		<< e << std::endl << std::endl;
+
+	P.first.setIdentity();
+	P.second = Reconstruction3D::computeP(F, e);
+
+	std::cout
+		<< std::endl << std::fixed
+		<< "P: " << std::endl
+		<< P.first << std::endl << std::endl
+		<< P.second << std::endl << std::endl;
 
 	//K.first = K.second = Reconstruction3D::computeK(F);
 	//

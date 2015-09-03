@@ -101,8 +101,48 @@ Eigen::MatrixXd Reconstruction3D::computeE(const Eigen::MatrixXd& K, const Eigen
 
 
 
-Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
-											const Eigen::MatrixXd& E)
+Eigen::Matrix3d Reconstruction3D::computeEpipoleMat(const Eigen::Matrix3d& F)
+{
+	Eigen::JacobiSVD<Eigen::MatrixXd> svd(F.transpose(), Eigen::ComputeFullV);
+	Eigen::MatrixXd kernel = svd.matrixV().col(svd.matrixV().cols() - 1);
+
+	Eigen::Matrix3d e(3, 3);
+	e(0, 0) = kernel(0);
+	e(0, 1) = kernel(1);
+	e(0, 2) = kernel(2);
+	e(1, 0) = kernel(3);
+	e(1, 1) = kernel(4);
+	e(1, 2) = kernel(5);
+	e(2, 0) = kernel(6);
+	e(2, 1) = kernel(7);
+	e(2, 2) = kernel(8);
+
+	return e;
+}
+
+
+Eigen::Vector3d Reconstruction3D::computeEpipole(const Eigen::Matrix3d& F)
+{
+	Eigen::JacobiSVD<Eigen::MatrixXd> svd(F.transpose(), Eigen::ComputeFullV);
+	Eigen::MatrixXd kernel = svd.matrixV().col(svd.matrixV().cols() - 1);
+	return Eigen::Vector3d( -kernel(5), kernel(2), -kernel(1));
+}
+
+
+Eigen::MatrixXd Reconstruction3D::computeP(const Eigen::MatrixXd& F, const Eigen::MatrixXd& eMat)
+{
+	Eigen::MatrixXd Fe(3, 4);
+	Fe.block(0, 0, 3, 3) = F;
+	Fe(0, 3) = -eMat(1, 2);
+	Fe(1, 3) =  eMat(0, 2);
+	Fe(2, 3) = -eMat(0, 1);
+
+	return eMat * Fe;
+}
+
+
+Eigen::MatrixXd Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+	const Eigen::MatrixXd& E)
 {
 	Eigen::JacobiSVD< Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner > svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
 	Eigen::MatrixXd U = svd.matrixU();
@@ -145,7 +185,7 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 	P1noT = U * W.transpose() * Vt;
 	P1.block(0, 0, 3, 3) = P1noT;
 	P1.block(0, 3, 3, 1) = u3;
-	
+
 	if (checkP(pts, P0, P1))
 	{
 		++numCorrectSolutions;
@@ -160,9 +200,9 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 		bestP1 = P1;
 	}
 
-	if (numCorrectSolutions < 1) 
+	if (numCorrectSolutions < 1)
 		std::cerr << "[Error]   : None of the results for P1 was accepted!" << std::endl << std::endl;
-	else if (numCorrectSolutions > 1) 
+	else if (numCorrectSolutions > 1)
 		std::cerr << "[Error]   : More than one solution found" << std::endl << std::endl;
 	else
 		std::cerr << "[Info]    : Solution found for P1: \n" << bestP1 << std::endl << std::endl;
@@ -171,9 +211,9 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 }
 
 
-bool Reconstruction3D::checkP(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
-								const Eigen::MatrixXd& P0, 
-								const Eigen::MatrixXd& P1)
+bool Reconstruction3D::checkP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+	const Eigen::MatrixXd& P0,
+	const Eigen::MatrixXd& P1)
 {
 	Eigen::VectorXd p0 = pts[0].first;
 	Eigen::VectorXd p1 = pts[0].second;
@@ -191,24 +231,7 @@ bool Reconstruction3D::checkP(	const std::vector<std::pair<Eigen::Vector2d, Eige
 	return (x0.z() > 0.0) && (x1.z() > 0.0);
 }
 
-Eigen::Matrix3d Reconstruction3D::computeEpipole(const Eigen::Matrix3d& F)
-{
-	Eigen::JacobiSVD<Eigen::MatrixXd> svd(F.transpose(), Eigen::ComputeFullV);
-	Eigen::MatrixXd kernel = svd.matrixV().col(svd.matrixV().cols() - 1);
 
-	Eigen::Matrix3d e(3, 3);
-	e(0, 0) = kernel(0);
-	e(0, 1) = kernel(1);
-	e(0, 2) = kernel(2);
-	e(1, 0) = kernel(3);
-	e(1, 1) = kernel(4);
-	e(1, 2) = kernel(5);
-	e(2, 0) = kernel(6);
-	e(2, 1) = kernel(7);
-	e(2, 2) = kernel(8);
-
-	return e;
-}
 
 double Reconstruction3D::computeError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& F)
 {

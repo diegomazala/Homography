@@ -19,14 +19,18 @@ public:
 	
 	static Eigen::MatrixXd computeE(const Eigen::MatrixXd& K, const Eigen::MatrixXd& F);
 	
+	static Eigen::Matrix3d computeEpipoleMat(const Eigen::Matrix3d& F);
+	static Eigen::Vector3d computeEpipole(const Eigen::Matrix3d& F);
+
+	static Eigen::MatrixXd computeP(const Eigen::MatrixXd& F, const Eigen::MatrixXd& eMat);
+
 	static Eigen::MatrixXd computeP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
-									const Eigen::MatrixXd& E);
+		const Eigen::MatrixXd& E);
 
-	static bool checkP(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
-						const Eigen::MatrixXd& P0,
-						const Eigen::MatrixXd& P1);
+	static bool checkP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+		const Eigen::MatrixXd& P0,
+		const Eigen::MatrixXd& P1);
 
-	static Eigen::Matrix3d computeEpipole(const Eigen::Matrix3d& F);
 
 	static double computeError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& F);
 
