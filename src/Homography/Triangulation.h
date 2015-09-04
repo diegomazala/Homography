@@ -19,10 +19,10 @@ public:
 					const std::pair<Eigen::VectorXd, Eigen::VectorXd>& _x);
 
 
-	Eigen::Vector3d solve() const;
+	Eigen::VectorXd solve() const;
 
 
-	static Eigen::Vector3d solve(const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& _P,
+	static Eigen::VectorXd solve(const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& _P,
 								const std::pair<Eigen::VectorXd, Eigen::VectorXd>& _x);
 
 
