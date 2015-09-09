@@ -9,7 +9,5 @@ add_subdirectory (SurfOpenCV)
 add_subdirectory (TestNonLinear)
 
 
-add_subdirectory (ComputerVision)
-add_subdirectory (TestComputerVision)
-add_subdirectory (TestReconstruction3D)
+add_subdirectory (TestReconstruction3DCube)
 add_subdirectory (TestTriangulation)

@@ -120,7 +120,7 @@ void computePX()
 }
 
 
-void exportObj(const std::string& filename, const std::vector<Eigen::Vector3d>& points3D)
+void exportCubeObj(const std::string& filename, const std::vector<Eigen::Vector3d>& points3D)
 {
 	std::ofstream file;
 	file.open(filename);
@@ -139,7 +139,7 @@ void exportObj(const std::string& filename, const std::vector<Eigen::Vector3d>& 
 	file.close();
 }
 
-void exportObj(const std::string& filename, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points2D)
+void exportCubeObj(const std::string& filename, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points2D)
 {
 	std::ofstream file;
 	file.open(filename);
@@ -265,8 +265,8 @@ int main(int argc, char* argv[])
 		std::cout << std::fixed << X.transpose() << std::endl;
 	}
 
-	exportObj("../../data/Points2DNorm_Src.obj", Points2DNorm);
-	exportObj("../../data/Points2D_Src.obj", Points2D);
+	exportCubeObj("../../data/Points2DNorm_Src.obj", Points2DNorm);
+	exportCubeObj("../../data/Points2D_Src.obj", Points2D);
 
 	P.second = Pmat;
 
