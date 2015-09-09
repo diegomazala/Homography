@@ -30,7 +30,6 @@ void setupMatrices()
 	K.first(1, 2) = 0;
 	K.first(2, 2) = 1.0;
 	K.second = K.first;
-	
 
 	//
 	// R Matrix
@@ -116,9 +115,9 @@ void computePX()
 
 	for (auto p3d : Points3D)
 	{
-		Eigen::VectorXd p0 = P.first * p3d.homogeneous();
+		Eigen::Vector3d p0 = P.first * p3d.homogeneous();
 		p0 = p0 / p0[2];
-		Eigen::VectorXd p1 = P.second * p3d.homogeneous();
+		Eigen::Vector3d p1 = P.second * p3d.homogeneous();
 		p1 = p1 / p1[2];
 
 		//std::cout
@@ -154,7 +153,7 @@ int main(int argc, char* argv[])
 	int i = 0;
 	for (auto x : Points2D)
 	{
-		Eigen::VectorXd X = Triangulation::solve(P, x);
+		Eigen::Vector3d X = Triangulation::solve(P, x).head<3>();
 		std::string aprox_str = X.isApprox(Points3D[i]) ? "--[Ok]" : "-- [FAIL]";
 		std::cout
 			<< std::fixed << aprox_str << std::endl
