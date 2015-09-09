@@ -31,7 +31,7 @@ bool testObjPoints(const std::string& filename_in, const std::string& filename_o
 
 		if (!std::getline(inFile, str))
 		{
-			std::cerr << "Error: Problens when reading obj file: " << filename_in << std::endl;
+			std::cerr << "Error: Problems when reading obj file: " << filename_in << std::endl;
 			return false;
 		}
 
@@ -51,8 +51,8 @@ bool testObjPoints(const std::string& filename_in, const std::string& filename_o
 			outFile << "v " << pt.transpose() << std::endl;
 		}
 
-		if (i++ == 25000)
-			break;
+		//if (i++ == 25000)
+		//	break;
 	}
 
 	inFile.close();
@@ -200,8 +200,10 @@ int main(int argc, char* argv[])
 	Rt.second.col(3) = -R.second * t.second;
 
 	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> P;
-	P.first = K.first * R.first;
-	P.second = K.second * R.second;
+	//P.first = K.first * R.first;
+	//P.second = K.second * R.second;
+	P.first = K.first * Rt.first;
+	P.second = K.second * Rt.second;
 
 	std::cout << "K1 : " << std::endl << K.first << std::endl << std::endl;
 	std::cout << "K2 : " << std::endl << K.second << std::endl << std::endl;
@@ -275,7 +277,7 @@ int main(int argc, char* argv[])
 	//	<< std::endl << std::fixed
 	//	<< "F constrained and denormalized: " << std::endl
 	//	<< F << std::endl << std::endl;
-	F /= F(2, 2);
+	//F /= F(2, 2);
 
 	std::cout
 		<< std::endl << std::fixed

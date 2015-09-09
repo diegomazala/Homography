@@ -8,6 +8,6 @@ add_subdirectory (Reconstruction3D)
 add_subdirectory (SurfOpenCV)
 add_subdirectory (TestNonLinear)
 
-
 add_subdirectory (TestReconstruction3DCube)
+add_subdirectory (TestReconstruction3DThaiLion)
 add_subdirectory (TestTriangulation)

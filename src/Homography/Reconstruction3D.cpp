@@ -247,8 +247,8 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 		std::cerr << "[Error]   : None of the results for P1 was accepted!" << std::endl << std::endl;
 	else if (numCorrectSolutions > 1)
 		std::cerr << "[Error]   : More than one solution found : " << numCorrectSolutions << std::endl << std::endl;
-	else
-		std::cerr << "[Info]    : Solution found for P: \n" << bestP1 << std::endl << std::endl;
+//	else
+//		std::cerr << "[Info]    : Solution found for P: \n" << bestP1 << std::endl << std::endl;
 
 	return bestP1;
 }
@@ -285,6 +285,88 @@ bool Reconstruction3D::checkP(const std::vector<std::pair<Eigen::Vector2d, Eigen
 	return (x0.z() > 0.0) && (x1.z() > 0.0);
 }
 
+void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+								const Eigen::MatrixXd& E, 
+								std::vector<Eigen::MatrixXd>& P_solutions)
+{
+	P_solutions.clear();
+
+	Eigen::JacobiSVD< Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner > svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
+	Eigen::MatrixXd U = svd.matrixU();
+	Eigen::MatrixXd Vt = svd.matrixV().transpose();
+
+
+	Eigen::MatrixXd W(3, 3);
+	W << 0.0, -1.0, 0.0,
+		1.0, 0.0, 0.0,
+		0.0, 0.0, 1.0;
+
+	Eigen::VectorXd u3 = U.col(2);
+
+	//std::cout << "--- Computing P Matrix: " << std::endl
+	//	<< "E: " << std::endl << E << std::endl << std::endl
+	//	<< "U: " << std::endl << U << std::endl << std::endl
+	//	<< "D: " << std::endl << svd.singularValues() << std::endl << std::endl
+	//	<< "Vt: " << std::endl << Vt << std::endl << std::endl
+	//	<< "W: " << std::endl << W << std::endl << std::endl
+	//	<< "u3 :" << u3 << std::endl << std::endl;
+
+	Eigen::MatrixXd P0(Eigen::MatrixXd::Identity(3, 4)); // Just K0: no translation or rotation.
+
+	Eigen::MatrixXd P1noT = U * W * Vt; // P without translation part.
+
+	Eigen::MatrixXd P1(3, 4);
+	P1.block(0, 0, 3, 3) = P1noT;
+	P1.block(0, 3, 3, 1) = u3;
+
+	//std::cout << "1st sol: " << std::endl;
+
+	Eigen::MatrixXd bestP1;
+	int numCorrectSolutions = 0;
+	if (checkP(pts, P0, P1))
+	{
+		++numCorrectSolutions;
+		bestP1 = P1;
+	}
+	P_solutions.push_back(P1);
+
+	P1.block(0, 3, 3, 1) = -u3;
+
+	//std::cout << "2nd sol: " << std::endl;
+
+	if (checkP(pts, P0, P1))
+	{
+		++numCorrectSolutions;
+		bestP1 = P1;
+	}
+	P_solutions.push_back(P1);
+
+	P1noT = U * W.transpose() * Vt;
+	P1.block(0, 0, 3, 3) = P1noT;
+	P1.block(0, 3, 3, 1) = u3;
+
+	//std::cout << "3rd sol: " << std::endl;
+
+	if (checkP(pts, P0, P1))
+	{
+		++numCorrectSolutions;
+		bestP1 = P1;
+	}
+	P_solutions.push_back(P1);
+
+	P1.block(0, 3, 3, 1) = -u3;
+
+	//std::cout << "4th sol: " << std::endl;
+
+	if (checkP(pts, P0, P1))
+	{
+		++numCorrectSolutions;
+		bestP1 = P1;
+	}
+	P_solutions.push_back(P1);
+
+	std::cout << "Number of correct solutions: " << numCorrectSolutions << std::endl << std::endl;
+}
 
 
 double Reconstruction3D::computeError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& F)

@@ -27,6 +27,9 @@ public:
 	static Eigen::MatrixXd computeP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
 		const Eigen::MatrixXd& E);
 
+	static void computeP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+		const Eigen::MatrixXd& E, std::vector<Eigen::MatrixXd>& P_solutions);
+
 	static bool checkP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
 		const Eigen::MatrixXd& P0,
 		const Eigen::MatrixXd& P1);

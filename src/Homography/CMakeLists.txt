@@ -21,7 +21,8 @@ set  (HEADER_FILES
 						GaussNewton.h
 						RansacDLT.h
 						Reconstruction3D.h
-						Triangulation.h)
+						Triangulation.h
+						ObjHelper.h)
 
 
 include_directories (${CMAKE_SOURCE_DIR})

@@ -5,16 +5,17 @@
 #include "DLT.h"
 #include "Reconstruction3D.h"
 #include "Triangulation.h"
+#include "ObjHelper.h"
 #include <fstream>
 
 
 
 
-std::pair<Eigen::MatrixXd, Eigen::MatrixXd>					K (Eigen::MatrixXd(3, 3), Eigen::MatrixXd(3, 3));
-std::pair<Eigen::MatrixXd, Eigen::MatrixXd>					P (Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
-std::pair<Eigen::MatrixXd, Eigen::MatrixXd>					R (Eigen::MatrixXd(3, 3), Eigen::MatrixXd(3, 3));
+std::pair<Eigen::MatrixXd, Eigen::MatrixXd>					P(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
+std::pair<Eigen::Matrix3d, Eigen::Matrix3d>					K(Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero());
+std::pair<Eigen::Matrix3d, Eigen::Matrix3d>					R(Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero());
 std::pair<Eigen::MatrixXd, Eigen::MatrixXd>					Rt(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
-std::pair<Eigen::VectorXd, Eigen::VectorXd>					t (Eigen::VectorXd(3),    Eigen::VectorXd(3));
+std::pair<Eigen::Vector3d, Eigen::Vector3d>					t;
 
 std::vector<Eigen::Vector3d>								Points3D;
 std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>	Points2D;
@@ -26,13 +27,26 @@ void setupMatrices()
 	//
 	// K Matrix
 	//
+#if 1
 	K.first(0, 0) = K.first(1, 1) = 1.73205;
 	K.first(0, 2) = 0;
 	K.first(1, 2) = 0;
 	K.first(2, 2) = 1.0;
 	K.second = K.first;
-	
-
+#else	
+	#if 0
+		K.first(0, 0) = K.first(1, 1) = 114.873 / 0.0130887;
+		K.first(0, 2) = 1936;
+		K.first(1, 2) = 1296;
+		K.first(2, 2) = 1.0;
+	#else
+		K.second = K.first;
+		K.first(0, 0) = K.first(1, 1) = 114.873;
+		K.first(0, 2) = 1936 * 0.0130887;
+		K.first(1, 2) = 1296 * 0.0130887;
+		K.first(2, 2) = 1.0;
+	#endif
+#endif
 	//
 	// R Matrix
 	//
@@ -51,7 +65,8 @@ void setupMatrices()
 	//
 	// t vector
 	//
-	t.first << 0.0, 0.0, -2.0;
+	//t.first << 0.0, 0.0, -2.0;
+	t.first << 0.0, 0.0, 0.0;
 	t.second << 1.0, 0.0, -2.0;
 
 
@@ -66,8 +81,13 @@ void setupMatrices()
 	//
 	// P Matrix
 	//
+#if 0
+	P.first = K.first * Rt.first;
+	P.second = K.second * Rt.second;
+#else
 	P.first = Rt.first;
 	P.second = Rt.second;
+#endif
 
 
 	std::cout << "K : " << std::endl << K.first << std::endl << std::endl;
@@ -120,44 +140,6 @@ void computePX()
 }
 
 
-void exportCubeObj(const std::string& filename, const std::vector<Eigen::Vector3d>& points3D)
-{
-	std::ofstream file;
-	file.open(filename);
-	for (const auto X : points3D)
-	{
-		file << "v " << X.transpose() << std::endl;
-	}
-
-	file
-		<< "f 1 2 3 4" << std::endl
-		<< "f 8 7 6 5" << std::endl
-		<< "f 5 6 2 1" << std::endl
-		<< "f 4 3 7 8" << std::endl
-		<< "f 2 6 7 3" << std::endl
-		<< "f 5 1 4 8" << std::endl;
-	file.close();
-}
-
-void exportCubeObj(const std::string& filename, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points2D)
-{
-	std::ofstream file;
-	file.open(filename);
-	for (const auto x : points2D)
-	{
-		const Eigen::VectorXd& X = Triangulation::solve(P, x);
-		file << "v " << X.transpose() << std::endl;
-	}
-
-	file
-		<< "f 1 2 3 4" << std::endl
-		<< "f 8 7 6 5" << std::endl
-		<< "f 5 6 2 1" << std::endl
-		<< "f 4 3 7 8" << std::endl
-		<< "f 2 6 7 3" << std::endl
-		<< "f 5 1 4 8" << std::endl;
-	file.close();
-}
 
 
 
@@ -171,7 +153,6 @@ int main(int argc, char* argv[])
 	//
 	// Normalize points
 	// 
-	
 	std::pair<Eigen::Matrix3d, Eigen::Matrix3d> T = DLT::normalizePoints(Points2D, Points2DNorm);
 
 
@@ -219,8 +200,11 @@ int main(int argc, char* argv[])
 	//
 	// Compute P matrix
 	//
-	Eigen::MatrixXd Pmat = Reconstruction3D::computeP(Points2DNorm, E);
+	//Eigen::MatrixXd Pmat = Reconstruction3D::computeP(Points2DNorm, E);
+	std::vector<Eigen::MatrixXd> P_solutions;
+	Reconstruction3D::computeP(Points2DNorm, E, P_solutions);
 	//Pmat /= Pmat(2, 2);
+
 	//std::cout
 	//	<< std::endl << std::fixed
 	//	<< "P0: " << std::endl
@@ -232,10 +216,10 @@ int main(int argc, char* argv[])
 	//	<< P.second << std::endl << std::endl;
 
 	
-	std::cout
-		<< std::endl << std::fixed
-		<< "Pmat: " << std::endl
-		<< Pmat << std::endl << std::endl;
+	//std::cout
+	//	<< std::endl << std::fixed
+	//	<< "Pmat: " << std::endl
+	//	<< Pmat << std::endl << std::endl;
 
 
 	std::cout << "Error x'Fx=0  : " << Reconstruction3D::computeError(Points2D, F) << std::endl;
@@ -243,51 +227,22 @@ int main(int argc, char* argv[])
 	std::cout << "Error x'EX=0  : " << Reconstruction3D::computeError(Points2D, E) << std::endl << std::endl;
 
 
-
-	if (Pmat.isApprox(P.second))
-		std::cout << "TEST RESULT: Pmat.isApprox(P) [OK]" << std::endl;
-	else
-		std::cout << "TEST RESULT: Pmat.isApprox(P) [FAILED]" << std::endl;
+	P.first = Rt.first;
+	P.second = Rt.second;
 
 
-	std::cout << std::endl << std::endl;
-	for (auto p : Points2DNorm)
+
+	int i = 0;
+	std::string obj_file_name = "../../data/Cube-Points2D_" + std::to_string(i) + ".obj";
+	exportCubeObj(obj_file_name, Points2D, P);
+	for (auto m : P_solutions)
 	{
-		Eigen::VectorXd X = Triangulation::solve(P, p);
+		++i;
+		P.second = m;
 
-		std::cout << std::fixed << X.transpose() << std::endl;
+		std::string obj_file_name = "../../data/Cube-Points2D_" + std::to_string(i) + ".obj";
+		exportCubeObj(obj_file_name, Points2D, P);
 	}
-	std::cout << std::endl << std::endl;
-	for (auto p : Points2D)
-	{
-		Eigen::VectorXd X = Triangulation::solve(P, p);
-
-		std::cout << std::fixed << X.transpose() << std::endl;
-	}
-
-	exportCubeObj("../../data/Points2DNorm_Src.obj", Points2DNorm);
-	exportCubeObj("../../data/Points2D_Src.obj", Points2D);
-
-	P.second = Pmat;
-
-	std::cout << std::endl << std::endl;
-	for (auto p : Points2DNorm)
-	{
-		Eigen::VectorXd X = Triangulation::solve(P, p);
-
-		std::cout << std::fixed << X.transpose() << std::endl;
-	}
-	std::cout << std::endl << std::endl;
-	for (auto p : Points2D)
-	{
-		Eigen::VectorXd X = Triangulation::solve(P, p);
-		std::cout << std::fixed << X.transpose() << std::endl;
-	}
-
-	std::cout << std::endl << std::endl;
-
-	exportObj("../../data/Points2DNorm_Pmat.obj", Points2DNorm);
-	exportObj("../../data/Points2D_Pmat.obj", Points2D);
 
 	return EXIT_SUCCESS;
 }

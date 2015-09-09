@@ -4,7 +4,7 @@ get_filename_component(TARGET_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 
 
 
-set  (SOURCE_FILES		TestReconstruction3D.cpp )
+set  (SOURCE_FILES		TestReconstruction3DCube.cpp )
 
 set  (HEADER_FILES						)
 
