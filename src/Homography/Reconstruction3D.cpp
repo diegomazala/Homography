@@ -36,16 +36,30 @@ Eigen::MatrixXd Reconstruction3D::applyConstraint(const Eigen::MatrixXd& inputMa
 	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(inputMat, Eigen::ComputeFullU | Eigen::ComputeFullV);
 	Eigen::VectorXd singularValues = svd.singularValues();
 	double singularValue = (singularValues[0] + singularValues[1]) * 0.5;
-	Eigen::DiagonalMatrix< double, 3, 3 > diagonal(singularValues(0), singularValues(1), 0.0);
+	Eigen::DiagonalMatrix< double, 3, 3 > diagonal(singularValue, singularValue, 0.0);
 	Eigen::MatrixXd D = diagonal.toDenseMatrix();
 	Eigen::MatrixXd constrainedMat = svd.matrixU() * D * svd.matrixV().transpose();
 
-	//std::cout << std::fixed << "In  Mat:" << std::endl << inputMat << std::endl << std::endl;
-	//std::cout << std::fixed << "Out Mat:" << std::endl << constrainedMat << std::endl << std::endl;
+	std::cout << std::fixed << "In  Mat:" << std::endl << inputMat << std::endl << std::endl;
+	std::cout << std::fixed << "Out Mat:" << std::endl << constrainedMat << std::endl << std::endl;
 
 	std::cout << std::fixed
-		<< "In  determinant : " << inputMat.determinant() << std::endl
-		<< "Out determinant : " << constrainedMat.determinant() << std::endl << std::endl;
+		<< "F In  determinant : " << inputMat.determinant() << std::endl
+		<< "F Out determinant : " << constrainedMat.determinant() << std::endl << std::endl;
+
+
+	//MatrixXd DMat = D.toDenseMatrix();
+	//MatrixXd restricted = svd.matrixU() * DMat * svd.matrixV().transpose();
+
+	//std::cout << "========== E Restricion Appliance =============: " << endl
+	//	<< "Singular diagonal: " << endl << DMat << endl << endl
+	//	<< "U:" << endl << svd.matrixU() << endl << endl
+	//	<< "V:" << endl << svd.matrixV() << endl << endl
+	//	<< "E: " << endl << restricted << endl << endl
+	//	<< "Determinant: " << restricted.determinant() << endl << endl
+	//	<< "========== Restriction Appliance End =============" << endl << endl;
+
+	//*m_resultH = restricted;
 
 	return constrainedMat;
 }
@@ -55,10 +69,12 @@ Eigen::MatrixXd Reconstruction3D::computeF(const std::vector<std::pair<Eigen::Ve
 {
 	Eigen::MatrixXd A = Reconstruction3D::buildMatrixA(pts);
 
-	//std::cout << std::fixed << "A:" << std::endl << A << std::endl << std::endl;
+	//std::cout << std::fixed << "F A:" << std::endl << A << std::endl << std::endl;
 
-	Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullV);
+	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
 	Eigen::MatrixXd kernel = svd.matrixV().col(svd.matrixV().cols() - 1);
+
+	//std::cout << std::fixed << "kernel:" << std::endl << kernel << std::endl << std::endl;
 
 	Eigen::MatrixXd F(3, 3);
 	F(0, 0) = kernel(0);
@@ -81,8 +97,19 @@ Eigen::MatrixXd Reconstruction3D::computeF(const std::vector<std::pair<Eigen::Ve
 Eigen::MatrixXd Reconstruction3D::computeE(const Eigen::MatrixXd& K, const Eigen::MatrixXd& F)
 {
 	Eigen::MatrixXd E = K.transpose() * F * K;
-	E = applyConstraint(E);
-	E /= E(2, 2);
+	
+	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
+	Eigen::VectorXd singularValues = svd.singularValues();
+	Eigen::DiagonalMatrix< double, 3, 3 > diagonal(1, 1, 0.0);
+	Eigen::MatrixXd D = diagonal.toDenseMatrix();
+	Eigen::MatrixXd constrainedMat = svd.matrixU() * D * svd.matrixV().transpose();
+	E = constrainedMat;
+
+	std::cout << std::fixed
+		<< "E In  determinant : " << F.determinant() << std::endl
+		<< "E Out determinant : " << constrainedMat.determinant() << std::endl << std::endl;
+
+	//E /= E(2, 2);
 	return E;
 }
 
@@ -156,6 +183,14 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 
 	Eigen::VectorXd u3 = U.col(2);
 
+	//std::cout << "--- Computing P Matrix: " << std::endl
+	//	<< "E: " << std::endl << E << std::endl << std::endl
+	//	<< "U: " << std::endl << U << std::endl << std::endl
+	//	<< "D: " << std::endl << svd.singularValues() << std::endl << std::endl
+	//	<< "Vt: " << std::endl << Vt << std::endl << std::endl
+	//	<< "W: " << std::endl << W << std::endl << std::endl
+	//	<< "u3 :" << u3 << std::endl << std::endl;
+
 	Eigen::MatrixXd P0(Eigen::MatrixXd::Identity(3, 4)); // Just K0: no translation or rotation.
 
 	Eigen::MatrixXd P1noT = U * W * Vt; // P without translation part.
@@ -164,6 +199,7 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 	P1.block(0, 0, 3, 3) = P1noT;
 	P1.block(0, 3, 3, 1) = u3;
 
+	//std::cout << "1st sol: " << std::endl;
 
 	Eigen::MatrixXd bestP1;
 	int numCorrectSolutions = 0;
@@ -175,6 +211,7 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 
 	P1.block(0, 3, 3, 1) = -u3;
 
+	//std::cout << "2nd sol: " << std::endl;
 
 	if (checkP(pts, P0, P1))
 	{
@@ -186,6 +223,8 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 	P1.block(0, 0, 3, 3) = P1noT;
 	P1.block(0, 3, 3, 1) = u3;
 
+	//std::cout << "3rd sol: " << std::endl;
+
 	if (checkP(pts, P0, P1))
 	{
 		++numCorrectSolutions;
@@ -194,18 +233,22 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 
 	P1.block(0, 3, 3, 1) = -u3;
 
+	//std::cout << "4th sol: " << std::endl;
+
 	if (checkP(pts, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
 	}
 
+	std::cout << "Number of correct solutions: " << numCorrectSolutions << std::endl << std::endl;
+
 	if (numCorrectSolutions < 1)
 		std::cerr << "[Error]   : None of the results for P1 was accepted!" << std::endl << std::endl;
 	else if (numCorrectSolutions > 1)
-		std::cerr << "[Error]   : More than one solution found" << std::endl << std::endl;
+		std::cerr << "[Error]   : More than one solution found : " << numCorrectSolutions << std::endl << std::endl;
 	else
-		std::cerr << "[Info]    : Solution found for P1: \n" << bestP1 << std::endl << std::endl;
+		std::cerr << "[Info]    : Solution found for P: \n" << bestP1 << std::endl << std::endl;
 
 	return bestP1;
 }
@@ -222,11 +265,22 @@ bool Reconstruction3D::checkP(const std::vector<std::pair<Eigen::Vector2d, Eigen
 	pair[0] = std::pair< Eigen::VectorXd, Eigen::VectorXd >(p0, p1);
 
 
-	Triangulation triangulation(std::make_pair(P0, P1), pts[0]);
-	Eigen::Vector3d X = triangulation.solve();
+	//Triangulation triangulation(std::make_pair(P0, P1), pts[0]);
+	Eigen::VectorXd X = Triangulation::solve(std::make_pair(P0, P1), pts[0]);
 
 	Eigen::VectorXd x0 = P0 * X;
 	Eigen::VectorXd x1 = P1 * X;
+
+	//std::cout << "========== P1 Check =============: " << std::endl
+	//	<< "P0:" << std::endl << P0 << std::endl << std::endl
+	//	<< "P1:" << std::endl << P1 << std::endl << std::endl
+	//	<< "x: " << std::endl << p0.transpose() << std::endl << std::endl
+	//	<< "x': " << std::endl << p1.transpose() << std::endl << std::endl
+	//	<< "3d point: " << std::endl << X.transpose() << std::endl << std::endl
+	//	<< "Reprojected x: " << std::endl << x0.transpose() << std::endl << std::endl
+	//	<< "Reprojected x': " << std::endl << x1.transpose() << std::endl << std::endl
+	//	<< "========== P1 Check End =============: " << std::endl << std::endl;
+
 
 	return (x0.z() > 0.0) && (x1.z() > 0.0);
 }
