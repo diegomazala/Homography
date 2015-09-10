@@ -22,6 +22,8 @@ public:
 	static Eigen::Matrix3d computeEpipoleMat(const Eigen::Matrix3d& F);
 	static Eigen::Vector3d computeEpipole(const Eigen::Matrix3d& F);
 
+	static Eigen::MatrixXd computeP(const Eigen::MatrixXd& F);
+
 	static Eigen::MatrixXd computeP(const Eigen::MatrixXd& F, const Eigen::MatrixXd& eMat);
 
 	static Eigen::MatrixXd computeP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,

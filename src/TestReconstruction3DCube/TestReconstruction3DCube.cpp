@@ -5,7 +5,7 @@
 #include "DLT.h"
 #include "Reconstruction3D.h"
 #include "Triangulation.h"
-#include "ObjHelper.h"
+//#include "ObjHelper.h"
 #include <fstream>
 
 
@@ -20,6 +20,25 @@ std::pair<Eigen::Vector3d, Eigen::Vector3d>					t;
 std::vector<Eigen::Vector3d>								Points3D;
 std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>	Points2D;
 std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>	Points2DNorm;
+
+void exportCubeObj(const std::string& filename, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& x_array, const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& P)
+{
+	std::ofstream file;
+	file.open(filename);
+	for (const auto x : x_array)
+	{
+		auto X = Triangulation::solve(P, x);
+		file << "v " << X.transpose() << std::endl;
+	}
+	file 
+		<< "f 1 2 3 4" << std::endl
+		<< "f 8 7 6 5" << std::endl
+		<< "f 5 6 2 1" << std::endl
+		<< "f 4 3 7 8" << std::endl
+		<< "f 2 6 7 3" << std::endl
+		<< "f 5 1 4 8" << std::endl;
+	file.close();
+}
 
 
 void setupMatrices()
@@ -222,9 +241,9 @@ int main(int argc, char* argv[])
 	//	<< Pmat << std::endl << std::endl;
 
 
-	std::cout << "Error x'Fx=0  : " << Reconstruction3D::computeError(Points2D, F) << std::endl;
-	std::cout << "Error x'FnX=0 : " << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
-	std::cout << "Error x'EX=0  : " << Reconstruction3D::computeError(Points2D, E) << std::endl << std::endl;
+	std::cout << "[Info]  Error x'Fx=0  : " << Reconstruction3D::computeError(Points2D, F) << std::endl;
+	std::cout << "[Info]  Error x'FnX=0 : " << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
+	std::cout << "[Info]  Error x'EX=0  : " << Reconstruction3D::computeError(Points2D, E) << std::endl << std::endl;
 
 
 	P.first = Rt.first;
@@ -233,16 +252,50 @@ int main(int argc, char* argv[])
 
 
 	int i = 0;
+
+	std::cout
+		<< std::endl
+		<< "[Info]  Exporting : Cube-Points2D_" << i << ".obj" << std::endl
+		<< "[Info]  P Solution " << i << std::endl
+		<< P.second << std::endl;
 	std::string obj_file_name = "../../data/Cube-Points2D_" + std::to_string(i) + ".obj";
 	exportCubeObj(obj_file_name, Points2D, P);
+
+
 	for (auto m : P_solutions)
 	{
 		++i;
+
 		P.second = m;
 
+		std::cout
+			<< std::endl
+			<< "[Info]  Exporting : Cube-Points2D_" << i << ".obj" << std::endl
+			<< "[Info]  P Solution " << i << std::endl
+			<< P.second << std::endl;
 		std::string obj_file_name = "../../data/Cube-Points2D_" + std::to_string(i) + ".obj";
 		exportCubeObj(obj_file_name, Points2D, P);
 	}
+
+
+	std::cout << "\n\n------------------------------ Computing epipole..." << std::endl;
+	P.second = Reconstruction3D::computeP(F);
+
+	P.second /= P.second(2, 2);
+
+	std::cout
+		<< std::endl << std::fixed
+		<< "P': " << std::endl
+		<< P.second << std::endl << std::endl;
+
+	i++;
+	std::cout
+		<< std::endl
+		<< "[Info]  Exporting : Cube-Points2D_" << i << ".obj" << std::endl
+		<< "[Info]  P Solution " << i << std::endl
+		<< P.second << std::endl;
+	obj_file_name = "../../data/Cube-Points2D_" + std::to_string(i) + ".obj";
+	exportCubeObj(obj_file_name, Points2D, P);
 
 	return EXIT_SUCCESS;
 }

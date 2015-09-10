@@ -156,12 +156,54 @@ Eigen::Vector3d Reconstruction3D::computeEpipole(const Eigen::Matrix3d& F)
 }
 
 
+Eigen::MatrixXd Reconstruction3D::computeP(const Eigen::MatrixXd& F)
+{
+	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(F.transpose(), Eigen::ComputeFullU | Eigen::ComputeFullV);
+	//Eigen::JacobiSVD<Eigen::MatrixXd> svd(F.transpose(), Eigen::ComputeFullV);
+	Eigen::MatrixXd kernel = svd.matrixV().col(svd.matrixV().cols() - 1);
+
+	Eigen::Matrix3d eMat(3, 3);
+	eMat(0, 0) = kernel(0);
+	eMat(0, 1) = kernel(1);
+	eMat(0, 2) = kernel(2);
+	eMat(1, 0) = kernel(3);
+	eMat(1, 1) = kernel(4);
+	eMat(1, 2) = kernel(5);
+	eMat(2, 0) = kernel(6);
+	eMat(2, 1) = kernel(7);
+	eMat(2, 2) = kernel(8);
+
+	
+
+	Eigen::Vector3d e(-kernel(5), kernel(2), -kernel(1));
+
+	Eigen::MatrixXd Fe(3, 4);
+	Fe.block(0, 0, 3, 3) = F;
+	Fe.col(3) = e;
+	//Fe(0, 3) = -e(1, 2);
+	//Fe(1, 3) =  e(0, 2);
+	//Fe(2, 3) = -e(0, 1);
+
+	Eigen::MatrixXd P = eMat * Fe;
+
+	std::cout
+		<< std::fixed << std::endl
+		<< "[Info]  Epipole             : " << std::endl << e.transpose() << std::endl << std::endl
+		<< "[Info]  Epipole Skew Matrix : " << std::endl << eMat << std::endl << std::endl
+		<< "[Info]  F : " << std::endl << F << std::endl << std::endl
+		<< "[Info]  Fe : " << std::endl << Fe << std::endl << std::endl
+		<< "[Info]  P'                  : " << std::endl << P << std::endl << std::endl;
+		
+
+	return P;
+}
+
 Eigen::MatrixXd Reconstruction3D::computeP(const Eigen::MatrixXd& F, const Eigen::MatrixXd& eMat)
 {
 	Eigen::MatrixXd Fe(3, 4);
 	Fe.block(0, 0, 3, 3) = F;
 	Fe(0, 3) = -eMat(1, 2);
-	Fe(1, 3) =  eMat(0, 2);
+	Fe(1, 3) = eMat(0, 2);
 	Fe(2, 3) = -eMat(0, 1);
 
 	return eMat * Fe;
@@ -199,8 +241,6 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 	P1.block(0, 0, 3, 3) = P1noT;
 	P1.block(0, 3, 3, 1) = u3;
 
-	//std::cout << "1st sol: " << std::endl;
-
 	Eigen::MatrixXd bestP1;
 	int numCorrectSolutions = 0;
 	if (checkP(pts, P0, P1))
@@ -210,8 +250,6 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 	}
 
 	P1.block(0, 3, 3, 1) = -u3;
-
-	//std::cout << "2nd sol: " << std::endl;
 
 	if (checkP(pts, P0, P1))
 	{
@@ -223,8 +261,6 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 	P1.block(0, 0, 3, 3) = P1noT;
 	P1.block(0, 3, 3, 1) = u3;
 
-	//std::cout << "3rd sol: " << std::endl;
-
 	if (checkP(pts, P0, P1))
 	{
 		++numCorrectSolutions;
@@ -233,7 +269,6 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 
 	P1.block(0, 3, 3, 1) = -u3;
 
-	//std::cout << "4th sol: " << std::endl;
 
 	if (checkP(pts, P0, P1))
 	{
@@ -319,25 +354,24 @@ void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eig
 	P1.block(0, 0, 3, 3) = P1noT;
 	P1.block(0, 3, 3, 1) = u3;
 
-	//std::cout << "1st sol: " << std::endl;
-
 	Eigen::MatrixXd bestP1;
 	int numCorrectSolutions = 0;
 	if (checkP(pts, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
+
+		std::cout << "[Info]  Best solution for P: 1st" << std::endl << std::endl;
 	}
 	P_solutions.push_back(P1);
 
 	P1.block(0, 3, 3, 1) = -u3;
 
-	//std::cout << "2nd sol: " << std::endl;
-
 	if (checkP(pts, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
+		std::cout << "[Info]  Best solution for P: 2nd" << std::endl << std::endl;
 	}
 	P_solutions.push_back(P1);
 
@@ -345,27 +379,27 @@ void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eig
 	P1.block(0, 0, 3, 3) = P1noT;
 	P1.block(0, 3, 3, 1) = u3;
 
-	//std::cout << "3rd sol: " << std::endl;
 
 	if (checkP(pts, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
+		std::cout << "[Info]  Best solution for P: 3rd" << std::endl << std::endl;
 	}
 	P_solutions.push_back(P1);
 
 	P1.block(0, 3, 3, 1) = -u3;
 
-	//std::cout << "4th sol: " << std::endl;
 
 	if (checkP(pts, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
+		std::cout << "[Info]  Best solution for P: 4th" << std::endl << std::endl;
 	}
 	P_solutions.push_back(P1);
 
-	std::cout << "Number of correct solutions: " << numCorrectSolutions << std::endl << std::endl;
+	std::cout << "[Info]  Number of correct solutions: " << numCorrectSolutions << std::endl << std::endl;
 }
 
 

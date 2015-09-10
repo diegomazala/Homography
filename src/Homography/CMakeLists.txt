@@ -22,7 +22,8 @@ set  (HEADER_FILES
 						RansacDLT.h
 						Reconstruction3D.h
 						Triangulation.h
-						ObjHelper.h)
+						#ObjHelper.h
+						)
 
 
 include_directories (${CMAKE_SOURCE_DIR})
