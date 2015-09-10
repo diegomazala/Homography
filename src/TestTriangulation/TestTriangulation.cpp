@@ -25,10 +25,24 @@ void setupMatrices()
 	//
 	// K Matrix
 	//
+#if 0
 	K.first(0, 0) = K.first(1, 1) = 1.73205;
 	K.first(0, 2) = 0;
 	K.first(1, 2) = 0;
 	K.first(2, 2) = 1.0;
+#else
+	#if 1 // pixel unit measure
+		K.first(0, 0) = K.first(1, 1) = -114.873 / 0.0130887;
+		K.first(0, 2) = 1936;
+		K.first(1, 2) = 1296;
+		K.first(2, 2) = -1.0;
+	#else	// mm unit measure
+		K.first(0, 0) = K.first(1, 1) = 114.873;
+		K.first(0, 2) = 1936 * 0.0130887;
+		K.first(1, 2) = 1296 * 0.0130887;
+		K.first(2, 2) = 1.0;
+	#endif
+#endif
 	K.second = K.first;
 
 	//
@@ -49,7 +63,8 @@ void setupMatrices()
 	//
 	// t vector
 	//
-	t.first << 0.0, 0.0, -2.0;
+	//t.first << 0.0, 0.0, -2.0;
+	t.first << 0.0, 0.0, 0.0;
 	t.second << 1.0, 0.0, -2.0;
 
 

@@ -12,3 +12,5 @@ add_subdirectory (TestReconstruction3DCube)
 add_subdirectory (TestReconstruction3DThaiLion)
 add_subdirectory (TestTriangulation)
 
+add_subdirectory (ComputerVision)
+add_subdirectory (TestComputerVision)
