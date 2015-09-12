@@ -287,7 +287,7 @@ int main(int argc, char* argv[])
 	/////////////////////////////////////////////////////////////////////////////////////// 
 
 
-	Eigen::MatrixXd E = Reconstruction3D::computeE(K.first, F);
+	Eigen::MatrixXd E = Reconstruction3D::computeE(K, F);
 	std::cout
 		<< std::endl << std::fixed
 		<< "E: " << std::endl
