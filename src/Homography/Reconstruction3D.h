@@ -15,7 +15,7 @@ public:
 
 	static Eigen::MatrixXd computeF(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts);
 
-	static Eigen::MatrixXd computeE(const Eigen::MatrixXd& K, const Eigen::MatrixXd& F);
+	static Eigen::MatrixXd computeE(const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K, const Eigen::MatrixXd& F);
 
 	static Eigen::MatrixXd computeK(const Eigen::MatrixXd& F);
 		
