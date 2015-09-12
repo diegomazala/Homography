@@ -8,6 +8,52 @@
 #include "Triangulation.h"
 
 
+
+static bool readPointsFromObj(const std::string& filename, std::vector<Eigen::Vector3d>& points3D, int max_point_count = INT_MAX)
+{
+	std::ifstream inFile;
+	inFile.open(filename);
+
+	if (!inFile.is_open())
+	{
+		std::cerr << "Error: Could not open obj input file: " << filename << std::endl;
+		return false;
+	}
+
+	points3D.clear();
+
+	int i = 0;
+	while (inFile)
+	{
+		std::string str;
+
+		if (!std::getline(inFile, str))
+		{
+			std::cerr << "Error: Problems when reading obj file: " << filename << std::endl;
+			return false;
+		}
+
+		if (str[0] == 'v')
+		{
+			std::stringstream ss(str);
+			std::vector <std::string> record;
+
+			char c;
+			double x, y, z;
+			ss >> c >> x >> y >> z;
+
+			Eigen::Vector3d p(x, y, z);
+			points3D.push_back(p);
+		}
+
+		if (i++ > max_point_count)
+			break;
+	}
+
+	inFile.close();
+	return true;
+}
+
 static void exportObj(const std::string& filename, const std::vector<Eigen::Vector3d>& points3D)
 {
 	std::ofstream file;
@@ -27,6 +73,23 @@ static void exportObj(const std::string& filename, const std::vector<std::pair<E
 	{
 		const Eigen::VectorXd& X = Triangulation::solve(P, x);
 		file << "v " << X.transpose() << std::endl;
+	}
+	file.close();
+}
+
+static void exportObj(const std::string& filename1, const std::string& filename2, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points2D)
+{
+	std::ofstream file;
+	file.open(filename1);
+	for (const auto x : points2D)
+	{
+		file << "v " << x.first.homogeneous().transpose() << std::endl;
+	}
+	file.close();
+	file.open(filename2);
+	for (const auto x : points2D)
+	{
+		file << "v " << x.second.homogeneous().transpose() << std::endl;
 	}
 	file.close();
 }
@@ -73,7 +136,8 @@ static void exportCubeObj(const std::string& filename, const std::vector<std::pa
 }
 
 
-static bool importExportObjPoints(const std::string& filename_in, const std::string& filename_out, const Eigen::MatrixXd& mat)
+
+bool project3DPointsFile(const std::string& filename_in, const std::string& filename_out, const Eigen::MatrixXd& mat, int max_point_count = INT_MAX)
 {
 	std::ifstream inFile;
 	inFile.open(filename_in);
@@ -87,6 +151,7 @@ static bool importExportObjPoints(const std::string& filename_in, const std::str
 	std::ofstream outFile;
 	outFile.open(filename_out);
 
+	assert(mat.rows() == 3 && mat.cols() == 4);
 
 	int i = 0;
 	while (inFile)
@@ -99,6 +164,7 @@ static bool importExportObjPoints(const std::string& filename_in, const std::str
 			return false;
 		}
 
+
 		if (str[0] == 'v')
 		{
 			std::stringstream ss(str);
@@ -108,14 +174,16 @@ static bool importExportObjPoints(const std::string& filename_in, const std::str
 			double x, y, z;
 			ss >> c >> x >> y >> z;
 
-			Eigen::Vector3d ptX(x, y, z);
+			Eigen::Vector4d ptX(x, y, z, 1);
 			Eigen::Vector3d pt = mat * ptX;
-
-			outFile << "v " << pt.transpose() << std::endl;
+			pt /= pt[2];
+			
+			outFile << std::fixed << "v " << pt.transpose() << std::endl;
 		}
 
-		if (i++ == 35000)
+		if (i++ > max_point_count)
 			break;
+
 	}
 
 	inFile.close();
@@ -123,6 +191,7 @@ static bool importExportObjPoints(const std::string& filename_in, const std::str
 
 	return true;
 }
+
 
 
 #endif //__DLT_H__
