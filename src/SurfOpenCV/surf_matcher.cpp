@@ -16,7 +16,7 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 
 const int LOOP_NUM = 10;
-const int GOOD_PTS_MAX = 8;
+const int GOOD_PTS_MAX = 50;
 const float GOOD_PORTION = 0.15f;
 
 int64 work_begin = 0;
