@@ -82,7 +82,7 @@ void setupMatrices()
 	//
 	// P Matrix
 	//
-#if 0
+#if 1
 	P.first = K.first * Rt.first;
 	P.second = K.second * Rt.second;
 #else
@@ -124,11 +124,15 @@ void computePX()
 {
 	Points2D.clear();
 
+	assert(P.first.rows() == 3 && P.first.cols() == 4
+		&& P.second.rows() == 3 && P.second.cols() == 4);
+
 	for (auto p3d : Points3D)
 	{
 		Eigen::VectorXd p0 = P.first * p3d.homogeneous();
-		p0 = p0 / p0[2];
 		Eigen::VectorXd p1 = P.second * p3d.homogeneous();
+
+		p0 = p0 / p0[2];
 		p1 = p1 / p1[2];
 
 		//std::cout
@@ -163,12 +167,19 @@ int main(int argc, char* argv[])
 	//
 	Eigen::MatrixXd Fn = Reconstruction3D::computeF(Points2DNorm);
 	
+	std::cout << "Error Points2D     F_Constrained x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
+	std::cout << "Error Points2DNorm F_Constrained x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, Fn) << std::endl;
+
+
 	//std::cout
 	//	<< std::endl << std::fixed
 	//	<< "F normalized: " << std::endl
 	//	<< Fn << std::endl << std::endl;
 
 	Fn = Reconstruction3D::applyConstraint(Fn);
+
+	std::cout << "Error Points2D     x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
+	std::cout << "Error Points2DNorm x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, Fn) << std::endl;
 
 	// 
 	// Denormalize F matrix
@@ -190,7 +201,7 @@ int main(int argc, char* argv[])
 	/////////////////////////////////////////////////////////////////////////////////////// 
 
 
-	Eigen::MatrixXd E = Reconstruction3D::computeE(K.first, F);
+	Eigen::MatrixXd E = Reconstruction3D::computeE(K, F);
 	std::cout
 		<< std::endl << std::fixed
 		<< "E: " << std::endl
@@ -206,35 +217,11 @@ int main(int argc, char* argv[])
 	Reconstruction3D::computeP(Points2DNorm, E, P_solutions);
 	//Pmat /= Pmat(2, 2);
 
-	//std::cout
-	//	<< std::endl << std::fixed
-	//	<< "P0: " << std::endl
-	//	<< P.first << std::endl << std::endl;
-
-	//std::cout
-	//	<< std::endl << std::fixed
-	//	<< "P1: " << std::endl
-	//	<< P.second << std::endl << std::endl;
-
-	
-	//std::cout
-	//	<< std::endl << std::fixed
-	//	<< "Pmat: " << std::endl
-	//	<< Pmat << std::endl << std::endl;
-
-
-	std::cout << "[Info]  Error x'Fx=0  : " << Reconstruction3D::computeError(Points2D, F) << std::endl;
-	std::cout << "[Info]  Error x'FnX=0 : " << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
-	std::cout << "[Info]  Error x'EX=0  : " << Reconstruction3D::computeError(Points2D, E) << std::endl << std::endl;
-
-
-	P.first = K.first * Rt.first;
-	P.second = K.second * Rt.second;
-
+	P.first = Eigen::MatrixXd::Identity(3, 4);
+	P.first.block(0, 0, 3, 3) = K.first;
 
 
 	int i = 0;
-
 	std::cout
 		<< std::endl
 		<< "[Info]  Exporting : Cube-Points2D_" << i << ".obj" << std::endl
@@ -260,25 +247,5 @@ int main(int argc, char* argv[])
 	}
 
 
-#if 0
-	std::cout << "\n\n------------------------------ Computing epipole..." << std::endl;
-	P.second = Reconstruction3D::computeP(F);
-
-	P.second /= P.second(2, 2);
-
-	std::cout
-		<< std::endl << std::fixed
-		<< "P': " << std::endl
-		<< P.second << std::endl << std::endl;
-
-	i++;
-	std::cout
-		<< std::endl
-		<< "[Info]  Exporting : Cube-Points2D_" << i << ".obj" << std::endl
-		<< "[Info]  P Solution " << i << std::endl
-		<< P.second << std::endl;
-	obj_file_name = "../../data/Cube-Points2D_" + std::to_string(i) + ".obj";
-	exportCubeObj(obj_file_name, Points2D, P);
-#endif
 	return EXIT_SUCCESS;
 }
