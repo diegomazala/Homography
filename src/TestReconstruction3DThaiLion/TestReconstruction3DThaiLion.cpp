@@ -162,6 +162,19 @@ void buildCorrespondenceFrom3DPoints(const std::vector<Eigen::Vector3d>& points3
 }
 
 
+void exportPointCorrespondence(const std::string& filename, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points2D)
+{
+	std::ofstream outFile;
+	outFile.open(filename);
+
+	outFile << "POINT_COUNT: " << points2D.size() << std::endl;
+
+	for (auto p: points2D)
+		outFile << std::fixed << '[' << p.first.transpose() << "]\t[" << p.second.transpose() << ']' << std::endl;
+
+	outFile.close();
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -173,6 +186,7 @@ int main(int argc, char* argv[])
 
 	readPointsFromObj("../../data/thai-lion.obj", Points3D, 36000);
 	buildCorrespondenceFrom3DPoints(Points3D, P, Points2DAll);
+	//exportPointCorrespondence("../../data/ThaiLion-pts.txt", Points2DAll);
 	//exportObj("../../data/thai-lion-proj2D-1.obj", "../../data/thai-lion-proj2D-2.obj", Points2DAll);
 
 	//project3DPointsFile("../../data/thai-lion/thai-lion.obj", "../../data/thai-lion-proj-1.obj", P.first);
