@@ -474,10 +474,11 @@ double Reconstruction3D::computeError(const std::vector<std::pair<Eigen::Vector2
 }
 
 
-double Reconstruction3D::computeGeometricError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& P)
+double Reconstruction3D::computeGeometricError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& P, double outlierThreshold, int& inliers)
 {
 	double error = 0;
-
+	inliers = 0;
+	
 	for (const auto x : pts)
 	{
 		Eigen::Vector3d x0 = x.first.homogeneous();
@@ -485,8 +486,8 @@ double Reconstruction3D::computeGeometricError(const std::vector<std::pair<Eigen
 
 		Eigen::VectorXd X = Triangulation::solve(P, x);
 
-		Eigen::Vector3d xx0 = P.first * x1;
-		Eigen::Vector3d xx1 = P.second * x0;
+		Eigen::Vector3d xx0 = P.first * X;
+		Eigen::Vector3d xx1 = P.second * X;
 
 		xx0 /= xx0[2];
 		xx1 /= xx1[2];
@@ -495,8 +496,20 @@ double Reconstruction3D::computeGeometricError(const std::vector<std::pair<Eigen
 		double d1 = Eigen::Vector3d(x1 - xx1).norm();
 
 		//error += d0 * d0 + d1 * d1;
-		error += d0 + d1;
+		double localError = d0 + d1;
+
+		std::cout << std::fixed 
+			<< "x0, x1      : " << x0.transpose() << '\t' << x1.transpose() << std::endl
+			<< "xx0, xx1    : " << xx0.transpose() << '\t' << xx1.transpose() << std::endl
+			<< "Local Error : " << localError << "  (" << d0 << ", " << d1 << ")" << std::endl;
+
+		if (localError < outlierThreshold)
+			++inliers;
+
+		error += localError;
 	}
+
+	std::cout << "Inliers     : " << inliers << std::endl;
 
 	return error;
 }

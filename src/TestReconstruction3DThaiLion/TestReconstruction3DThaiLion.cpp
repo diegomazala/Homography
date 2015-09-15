@@ -285,13 +285,46 @@ int main(int argc, char* argv[])
 	// Compute P matrix
 	//
 	P.first = Eigen::MatrixXd::Identity(3, 4);
-	P.first.block(0, 0, 3, 3) = K.first;
+	//P.first.block(0, 0, 3, 3) = K.first;
 	//
 	std::vector<Eigen::MatrixXd> P_solutions;
 	Reconstruction3D::computeP(Points2DNorm, E, P_solutions);
 	
-	exportPSolutions(P_solutions, Points2DAll);
+	//exportPSolutions(P_solutions, Points2DAll);
 
+	int minInliers = INT_MAX;
+	double minError = FLT_MAX;
+	int bestChoice = 0;
+
+	double outlierThreshold = 20.0;
+	int i = 0;
+	for (auto m : P_solutions)
+	{
+		++i;
+		P.second = m;
+
+		int inliersCount = 0;
+		double error = Reconstruction3D::computeGeometricError(Points2DNorm, P, 20.0, inliersCount);
+
+		//if (error < minError && inliersCount < minInliers)
+		if (inliersCount < minInliers)
+		{
+			minInliers = inliersCount;
+			minError = error;
+			bestChoice = i;
+		}
+
+		P.first.block(0, 0, 3, 3) = K.first;
+		P.second = K.second * P.second;
+
+		std::cout
+			<< std::endl << std::endl
+			<< "[Info]  Exporting : ThaiLion_" << i << ".obj ..." << std::endl << std::endl;
+		std::string obj_file_name = "../../data/ThaiLion_" + std::to_string(i) + ".obj";
+		exportObj(obj_file_name, Points2DAll, P);
+	}
+
+	std::cout << "Best Choice using inliers : " << bestChoice + 1 << std::endl;
 	
 	return EXIT_SUCCESS;
 }
