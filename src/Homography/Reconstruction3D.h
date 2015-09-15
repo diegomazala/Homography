@@ -5,18 +5,34 @@
 #include <vector>
 
 
+
+struct ReconstructionDLT
+{
+	ReconstructionDLT(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+		const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& _K);
+
+	void solve(double outlierThreshold = 30.0);
+
+	bool operator < (ReconstructionDLT const &other);
+
+	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points2D;
+	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points2DNorm;
+	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> K;
+	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> P;
+	double error;
+	int inliersCount;
+};
+
 class Reconstruction3D
 {
 public:
 
-	class Ransac
-	{
-	public:
-		static std::pair<Eigen::MatrixXd, Eigen::MatrixXd> solve(
-									const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
-									const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K);
 
-	};
+	static ReconstructionDLT solve(
+								const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+								const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K,
+								int maxIterations = 500);
+
 	
 	static Eigen::MatrixXd buildMatrixA(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts);
 
@@ -56,6 +72,8 @@ public:
 	static void RQdecomposition(Eigen::MatrixXd A, Eigen::Matrix3d &R, Eigen::Matrix3d &Q);
 	static void QRdecomposition(Eigen::MatrixXd A, Eigen::Matrix3d &R, Eigen::Matrix3d &Q);
 };
+
+
 
 
 

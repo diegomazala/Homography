@@ -5,112 +5,235 @@
 #include "DLT.h"
 #include "Reconstruction3D.h"
 #include "Triangulation.h"
+#include "ObjHelper.h"
 #include <fstream>
 
 
 
-bool testObjPoints(const std::string& filename_in, const std::string& filename_out, const Eigen::MatrixXd& mat)
-{
-	std::ifstream inFile;
-	inFile.open(filename_in);
 
-	if (!inFile.is_open())
+std::pair<Eigen::MatrixXd, Eigen::MatrixXd>					P(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
+std::pair<Eigen::Matrix3d, Eigen::Matrix3d>					K(Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero());
+std::pair<Eigen::Matrix3d, Eigen::Matrix3d>					R(Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero());
+std::pair<Eigen::MatrixXd, Eigen::MatrixXd>					Rt(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
+std::pair<Eigen::Vector3d, Eigen::Vector3d>					t;
+
+std::vector<Eigen::Vector3d>								Points3D;
+std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>	Points2D;
+std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>	Points2DNorm;
+std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>	Points2DAll;
+
+
+void setupMatrices()
+{
+
+#if 0
+	<MLRaster label = "DSC_0176.JPG">
+		<VCGCamera	LensDistortion = "0 0"
+		PixelSizeMm = "0.0130887 0.0130887"
+		TranslationVector = "79.3959 -114.356 -499.541 1"
+		CenterPx = "1936 1296"
+		RotationMatrix = "0.980106 -0.0199563 0.197469 0 0.0558328 0.982476 -0.177828 0 -0.190459 0.185315 0.964045 0 0 0 0 1 "
+		FocalMm = "114.873"
+		ViewportPx = "3872 2592" / >
+		<Plane semantic = "1" fileName = "DSC_0176.JPG" / >
+		< / MLRaster>
+
+		<MLRaster label = "DSC_0179.JPG">
+		<VCGCamera	LensDistortion = "0 0"
+		PixelSizeMm = "0.0130887 0.0130887"
+		TranslationVector = "-227.173 -103.559 -460.851 1"
+		CenterPx = "1936 1296"
+		RotationMatrix = "0.914099 -0.0148061 -0.40522 0 -0.0540653 0.98596 -0.157987 0 0.401869 0.166324 0.900465 0 0 0 0 1 "
+		FocalMm = "114.873"
+		ViewportPx = "3872 2592" / >
+		<Plane semantic = "1" fileName = "DSC_0179.JPG" / >
+		< / MLRaster>
+#endif
+
+		//
+		// K matrix
+		//
+#if 1 // pixel unit measure
+		K.first(0, 0) = K.first(1, 1) = 114.873 / 0.0130887;
+	K.first(0, 2) = 1936;
+	K.first(1, 2) = 1296;
+	K.first(2, 2) = 1.0;
+#else	// mm unit measure
+		K.first(0, 0) = K.first(1, 1) = 114.873;
+	K.first(0, 2) = 1936 * 0.0130887;
+	K.first(1, 2) = 1296 * 0.0130887;
+	K.first(2, 2) = 1.0;
+#endif
+	K.second = K.first;
+
+
+	//
+	// R matrix
+	//
+	R.first <<
+		0.980106, -0.0199563, 0.197469,
+		0.0558328, 0.982476, -0.177828,
+		-0.190459, 0.185315, 0.964045;
+
+	R.second <<
+		0.914099, -0.0148061, -0.40522,
+		-0.0540653, 0.98596, -0.157987,
+		0.401869, 0.166324, 0.900465;
+
+
+	//
+	// t vector
+	//
+	t.first << 79.3959, -114.356, -499.541;
+	t.second << -227.173, -103.559, -460.851;
+
+	//
+	// Rt matrix
+	//
+	Rt.first.block(0, 0, 3, 3) = R.first;
+	Rt.second.block(0, 0, 3, 3) = R.second;
+	Rt.first.col(3) = -R.first * t.first;
+	Rt.second.col(3) = -R.second * t.second;
+
+
+	//
+	// P matrix
+	//
+	//P.first = K.first * Rt.first;
+	//P.second = K.second * Rt.second;
+	P.first = Rt.first;
+	P.second = Rt.second;
+
+	//std::cout << "K1 : " << std::endl << K.first << std::endl << std::endl;
+	//std::cout << "K2 : " << std::endl << K.second << std::endl << std::endl;
+	//std::cout << "R1 : " << std::endl << R.first << std::endl << std::endl;
+	//std::cout << "R2 : " << std::endl << R.second << std::endl << std::endl;
+	//std::cout << "t1 : " << std::endl << t.first << std::endl << std::endl;
+	//std::cout << "t2 : " << std::endl << t.second << std::endl << std::endl;
+	//std::cout << "Rt1: " << std::endl << Rt.first << std::endl << std::endl;
+	//std::cout << "Rt2: " << std::endl << Rt.second << std::endl << std::endl;
+	//std::cout << "P1 : " << std::endl << P.first << std::endl << std::endl;
+	//std::cout << "P2 : " << std::endl << P.second << std::endl << std::endl;
+}
+
+void thaiLionPointCorrespondence()
+{
+	//		1600  955   1528  916
+	//		2164  960   2001  969
+	//		1924 1224   1620 1204
+	//		1912 1573   1635 1551
+	//		2235 1675   1929 1701
+	//		1623 1993   1378 1932
+	//		1845 2203   1570 2176
+	//		2184 2193   1867 2220
+
+	Points2D.clear();
+
+	Points2D.push_back(std::make_pair(Eigen::Vector2d(1600, 955), Eigen::Vector2d(1528, 916)));
+	Points2D.push_back(std::make_pair(Eigen::Vector2d(2164, 960), Eigen::Vector2d(2001, 969)));
+	Points2D.push_back(std::make_pair(Eigen::Vector2d(1924, 1224), Eigen::Vector2d(1620, 1204)));
+	Points2D.push_back(std::make_pair(Eigen::Vector2d(1912, 1573), Eigen::Vector2d(1635, 1551)));
+	Points2D.push_back(std::make_pair(Eigen::Vector2d(2235, 1675), Eigen::Vector2d(1929, 1701)));
+	Points2D.push_back(std::make_pair(Eigen::Vector2d(1623, 1993), Eigen::Vector2d(1378, 1932)));
+	Points2D.push_back(std::make_pair(Eigen::Vector2d(1845, 2203), Eigen::Vector2d(1570, 2176)));
+	Points2D.push_back(std::make_pair(Eigen::Vector2d(2184, 2193), Eigen::Vector2d(1867, 2220)));
+}
+
+void buildCorrespondenceFrom3DPoints(const std::vector<Eigen::Vector3d>& points3D,
+	const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& matP,
+	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points2D)
+{
+	points2D.clear();
+
+	assert(matP.first.rows() == 3 && matP.first.cols() == 4
+		&& matP.second.rows() == 3 && matP.second.cols() == 4);
+
+	for (auto p3d : points3D)
 	{
-		std::cerr << "Error: Could not open obj input file: " << filename_in << std::endl;
-		return false;
+		Eigen::Vector3d x0 = matP.first * p3d.homogeneous();
+		Eigen::Vector3d x1 = matP.second * p3d.homogeneous();
+
+		x0 /= x0[2];
+		x1 /= x1[2];
+
+		points2D.push_back(std::make_pair(x0.head<2>(), x1.head<2>()));
 	}
 
-	std::ofstream outFile;
-	outFile.open(filename_out);
+}
 
+
+void exportPointCorrespondence(const std::string& filename, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points2D)
+{
+	std::ofstream outFile;
+	outFile.open(filename);
+
+	outFile << "POINT_COUNT: " << points2D.size() << std::endl;
+
+	for (auto p : points2D)
+		outFile << std::fixed << '[' << p.first.transpose() << "]\t[" << p.second.transpose() << ']' << std::endl;
+
+	outFile.close();
+}
+
+
+void exportPSolutions(const std::vector<Eigen::MatrixXd>& P_solutions, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points2D)
+{
+	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> P_mat;
+	P_mat.first = Eigen::MatrixXd::Identity(3, 4);
+	P_mat.first.block(0, 0, 3, 3) = K.first;
 
 	int i = 0;
-	while (inFile)
+	for (auto m : P_solutions)
 	{
-		std::string str;
+		++i;
 
-		if (!std::getline(inFile, str))
-		{
-			std::cerr << "Error: Problems when reading obj file: " << filename_in << std::endl;
-			return false;
-		}
+		P_mat.second = K.second * m;
 
-		if (str[0] == 'v')
-		{
-			std::stringstream ss(str);
-			std::vector <std::string> record;
-
-			char c;
-			double x, y, z;
-			ss >> c >> x >> y >> z;
-
-			Eigen::Vector3d ptX(x, y, z);
-			Eigen::Vector3d pt = mat * ptX;
-
-			//std::cout << "- " << c << " " << x << " " << y << " " << z << std::endl;
-			outFile << "v " << pt.transpose() << std::endl;
-		}
-
-		//if (i++ == 25000)
-		//	break;
+		std::cout
+			<< std::endl << std::endl
+			<< "[Info]  Exporting : ThaiLion_" << i << ".obj ..." << std::endl << std::endl;
+		std::string obj_file_name = "../../data/ThaiLion_" + std::to_string(i) + ".obj";
+		exportObj(obj_file_name, points2D, P_mat);
 	}
-
-	inFile.close();
-	outFile.close();
-
-	return true;
 }
 
 
-
-void writeObjFile(const std::string& filename, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::Matrix3d& mat)
-{
-	std::ofstream file;
-	file.open(filename);
-	
-	for (const auto p : pts)
-	{
-		const auto& x0 = p.first.homogeneous();
-		const auto& x1 = p.second.homogeneous();
-		auto X1 = mat * x1;
-		file << "v " << X1.transpose() << std::endl;
-		auto X0 = mat * x0;
-		file << "v " << X0.transpose() << std::endl;
-	}
-
-	file.close();
-}
-
-void writePointsObjFiles(const std::string& filename, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& x_array, const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& P)
-{
-	std::ofstream file;
-	file.open(filename);
-	for (const auto x : x_array)
-	{
-		auto X = Triangulation::solve(P, x);
-		file << "v " << X.transpose() << std::endl;
-	}
-	file.close();
-}
 
 int main(int argc, char* argv[])
 {
-	if (argc < 4)
-	{
-		std::cout << "[Error] Missing parameters " << std::endl;
-		std::cout << "[Usage] App.exe InputImageFileNameLeft.png InputImageFileNameRight.png PointsFile.txt OutputImageFileName.png" << std::endl;
-		std::cout << "[Usage] App.exe ImageLeft.png ImageCenterRight.png ImageRight.png OutputImageFileName.png" << std::endl;
-		std::cout << "[Usage] ./Reconstruction3D.exe ../../data/pier/1.jpg ../../data/pier/2.jpg ../../data/pier/3.jpg ../../data/out.png" << std::endl;
-		std::cout << "[Usage] ./Reconstruction3D.exe ../../data/pier/1.jpg ../../data/pier/2.jpg ../../data/pier/3.jpg ../../data/out.png" << std::endl;
-		std::cout << "[Usage] ./Reconstruction3D.exe ../../data/pier/1.jpg ../../data/pier/2.jpg ../../data/results/pier12.txt ../../data/results/pier12.png" << std::endl;
-		return EXIT_FAILURE;
-	}
+	setupMatrices();
+	thaiLionPointCorrespondence();
 
-	QApplication app(argc, argv);
+	P.first = K.first * Rt.first;
+	P.second = K.second * Rt.second;
 
-	bool generatePoints = true;
+	readPointsFromObj("../../data/thai-lion.obj", Points3D, 36000);
+	buildCorrespondenceFrom3DPoints(Points3D, P, Points2DAll);
+	//exportPointCorrespondence("../../data/ThaiLion-pts.txt", Points2DAll);
+	//exportObj("../../data/thai-lion-proj2D-1.obj", "../../data/thai-lion-proj2D-2.obj", Points2DAll);
+
+	//project3DPointsFile("../../data/thai-lion/thai-lion.obj", "../../data/thai-lion-proj-1.obj", P.first);
+	//project3DPointsFile("../../data/thai-lion/thai-lion.obj", "../../data/thai-lion-proj-2.obj", P.second);
+	//return 0;
 
 
+
+	ReconstructionDLT dlt = Reconstruction3D::solve(Points2DAll, K);
+
+	std::cout << "Inliers: " << dlt.inliersCount << std::endl;
+
+	std::string obj_file_name = "../../data/ThaiLion_RANSAC.obj";
+	std::cout
+		<< std::endl << std::endl
+		<< "[Info]  Exporting : " << obj_file_name << " ..." << std::endl << std::endl;
+	//<< P.second << std::endl;
+	//exportObj(obj_file_name, Points2D, P);
+	//exportObj(obj_file_name, Points2DAll, P);
+	exportObj(obj_file_name, Points2DAll, dlt.P);
+
+	return 0;
+
+#if 0
 	std::vector<std::string> imageFiles;
 	std::string pointsFile;
 
@@ -126,140 +249,38 @@ int main(int argc, char* argv[])
 		if (str.find(".txt") != std::string::npos)
 			pointsFile = str;
 	}
-
-
-#if 0
-	<MLRaster label = "DSC_0176.JPG">
-		<VCGCamera	LensDistortion = "0 0" 
-		PixelSizeMm = "0.0130887 0.0130887" 
-		TranslationVector = "79.3959 -114.356 -499.541 1" 
-		CenterPx = "1936 1296" 
-		RotationMatrix = "0.980106 -0.0199563 0.197469 0 0.0558328 0.982476 -0.177828 0 -0.190459 0.185315 0.964045 0 0 0 0 1 " 
-		FocalMm = "114.873" 
-		ViewportPx = "3872 2592" / >
-		<Plane semantic = "1" fileName = "DSC_0176.JPG" / >
-		< / MLRaster>
-
-		<MLRaster label = "DSC_0179.JPG">
-		<VCGCamera	LensDistortion = "0 0" 
-		PixelSizeMm = "0.0130887 0.0130887" 
-		TranslationVector = "-227.173 -103.559 -460.851 1" 
-		CenterPx = "1936 1296" 
-		RotationMatrix = "0.914099 -0.0148061 -0.40522 0 -0.0540653 0.98596 -0.157987 0 0.401869 0.166324 0.900465 0 0 0 0 1 " 
-		FocalMm = "114.873" 
-		ViewportPx = "3872 2592" / >
-		<Plane semantic = "1" fileName = "DSC_0179.JPG" / >
-		< / MLRaster>
-#endif
-
-	//
-	// K matrix
-	//
-	std::pair<Eigen::Matrix3d, Eigen::Matrix3d> K(Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero());
-#if 0 // pixel unit measure
-	K.first(0, 0) = K.first(1, 1) = 114.873 / 0.0130887;
-	K.first(0, 2) = 1936;
-	K.first(1, 2) = 1296;
-	K.first(2, 2) = 1.0;
-#else	// mm unit measure
-	K.first(0, 0) = K.first(1, 1) = 114.873;
-	K.first(0, 2) = 1936 * 0.0130887;
-	K.first(1, 2) = 1296 * 0.0130887;
-	K.first(2, 2) = 1.0;
-#endif
-	K.second = K.first;
-
-
-	//
-	// R matrix
-	//
-	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> R(Eigen::MatrixXd(3, 3), Eigen::MatrixXd(3, 3));
-	
-	R.first <<
-		0.980106, -0.0199563, 0.197469,
-		0.0558328, 0.982476, -0.177828,
-		-0.190459, 0.185315, 0.964045;
-	
-	R.second << 
-		0.914099,	-0.0148061, -0.40522,
-		-0.0540653,	0.98596,	-0.157987,
-		0.401869,	0.166324,	0.900465;
-
-
-	//
-	// t vector
-	//
-	std::pair<Eigen::Vector3d, Eigen::Vector3d> t;
-	t.first << 79.3959, -114.356, -499.541;
-	t.second << -227.173, -103.559, -460.851;
-
-	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Rt(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
-	Rt.first.block(0, 0, 3, 3)  = R.first;
-	Rt.second.block(0, 0, 3, 3) = R.second;
-	Rt.first.col(3)  = -R.first * t.first;
-	Rt.second.col(3) = -R.second * t.second;
-
-	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> P;
-	//P.first = K.first * R.first;
-	//P.second = K.second * R.second;
-	P.first = K.first * Rt.first;
-	P.second = K.second * Rt.second;
-
-	std::cout << "K1 : " << std::endl << K.first << std::endl << std::endl;
-	std::cout << "K2 : " << std::endl << K.second << std::endl << std::endl;
-	std::cout << "R1 : " << std::endl << R.first << std::endl << std::endl;
-	std::cout << "R2 : " << std::endl << R.second << std::endl << std::endl;
-	std::cout << "t1 : " << std::endl << t.first << std::endl << std::endl;
-	std::cout << "t2 : " << std::endl << t.second << std::endl << std::endl;
-	std::cout << "Rt1: " << std::endl << Rt.first << std::endl << std::endl;
-	std::cout << "Rt2: " << std::endl << Rt.second << std::endl << std::endl;
-	std::cout << "P1 : " << std::endl << P.first << std::endl << std::endl;
-	std::cout << "P2 : " << std::endl << P.second << std::endl << std::endl;
-
-
-	testObjPoints("../../data/thai-lion/thai-lion.obj", "../../data/proj1.obj", P.first);
-	testObjPoints("../../data/thai-lion/thai-lion.obj", "../../data/proj2.obj", P.second);
-	return 0;
-
-	
-
-
 	//
 	// Reading points from file
 	//
-	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> pointsSrc;
-	if (!Points::readFromFile(pointsFile, pointsSrc))
+	if (!Points::readFromFile(pointsFile, Points2D))
 	{
 		std::cout << "[Error] Could not read points from file: " << pointsFile << std::endl;
 		return EXIT_FAILURE;
 	}
 	else
 	{
-		std::cout << "[Info]  Count of points loaded from file = " << pointsSrc.size() << std::endl;
+		std::cout << "[Info]  Count of points loaded from file = " << Points2D.size() << std::endl;
 	}
-
+#endif
 
 
 	//
 	// Normalize points
 	// 
-	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> pointsNorm;
-	std::pair<Eigen::Matrix3d, Eigen::Matrix3d> T = DLT::normalizePoints(pointsSrc, pointsNorm);
-	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points(pointsNorm.begin(), pointsNorm.begin() + 8);
 
-	for (auto pt = pointsSrc.begin(); pt < pointsSrc.begin() + 8; ++pt)
-	{
-		std::cout << pt->first.transpose() << "   " << pt->second.transpose() << std::endl;
-	}
+	std::pair<Eigen::Matrix3d, Eigen::Matrix3d> T = DLT::normalizePoints(Points2D, Points2DNorm);
 
-	
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	//
 	// Compute F matrix
 	//
-	Eigen::MatrixXd Fn = Reconstruction3D::computeF(points);
-	
+	Eigen::MatrixXd Fn = Reconstruction3D::computeF(Points2DNorm);
+	//Eigen::MatrixXd Fn = Reconstruction3D::computeF(Points2D);
+
+	//std::cout << "Error Points2D     x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
+	//std::cout << "Error Points2DNorm x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, Fn) << std::endl;
+
 	//std::cout
 	//	<< std::endl << std::fixed
 	//	<< "F normalized: " << std::endl
@@ -267,75 +288,65 @@ int main(int argc, char* argv[])
 
 	Fn = Reconstruction3D::applyConstraint(Fn);
 
+	//std::cout << "Error Points2D     F_Constrained x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
+	//std::cout << "Error Points2DNorm F_Constrained x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, Fn) << std::endl;
+
 	// 
 	// Denormalize F matrix
 	//
 	Eigen::MatrixXd F = DLT::denormalizeH(Fn, T);
+	//Eigen::MatrixXd F = Fn;
 
-	
+
 	//std::cout
 	//	<< std::endl << std::fixed
 	//	<< "F constrained and denormalized: " << std::endl
 	//	<< F << std::endl << std::endl;
-	//F /= F(2, 2);
 
-	std::cout
-		<< std::endl << std::fixed
-		<< "F constrained, denormalized and divided by F(2,2): " << std::endl
-		<< F << std::endl << std::endl;
+	//std::cout << "Error Points2D     x'Fx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, F) << std::endl;
+	//std::cout << "Error Points2DNorm x'Fx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, F) << std::endl;
+
+
+
+	//F /= F(2, 2);	// o erro aumenta
+	//std::cout
+	//	<< std::endl << std::fixed
+	//	<< "F constrained, denormalized and divided by F(2,2): " << std::endl
+	//	<< F << std::endl << std::endl;
 	//
 	/////////////////////////////////////////////////////////////////////////////////////// 
 
 
 	Eigen::MatrixXd E = Reconstruction3D::computeE(K, F);
-	std::cout
-		<< std::endl << std::fixed
-		<< "E: " << std::endl
-		<< E << std::endl << std::endl;
-	
+	//std::cout
+	//	<< std::endl << std::fixed
+	//	<< "E: " << std::endl
+	//	<< E << std::endl << std::endl;
 
+	//std::cout << "Error Points2D     x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, E) << std::endl;
+	//std::cout << "Error Points2DNorm x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, E) << std::endl;
+
+
+#if 0
 	///////////////////////////////////////////////////////////////////////////////////////
 	//
 	// Compute P matrix
 	//
-	Eigen::MatrixXd Pmat = Reconstruction3D::computeP(points, E);
-	//Pmat /= Pmat(2, 2);
-	//std::cout
-	//	<< std::endl << std::fixed
-	//	<< "P0: " << std::endl
-	//	<< P.first << std::endl << std::endl;
+	P.first = Eigen::MatrixXd::Identity(3, 4);
+	P.first.block(0, 0, 3, 3) = K.first;
+	//
+	Eigen::MatrixXd P2 = Reconstruction3D::computeP(Points2DNorm, E);
+	P.second = K.second * P2;
+	//
 
-	//std::cout
-	//	<< std::endl << std::fixed
-	//	<< "P1: " << std::endl
-	//	<< P.second << std::endl << std::endl;
-
-	
+	std::string obj_file_name = "../../data/ThaiLion_solution.obj";
 	std::cout
-		<< std::endl << std::fixed
-		<< "Pmat: " << std::endl
-		<< Pmat << std::endl << std::endl;
-	
+		<< std::endl << std::endl
+		<< "[Info]  Exporting : " << obj_file_name << " ..." << std::endl << std::endl
+		<< P.second << std::endl;
+	//exportObj(obj_file_name, Points2D, P);
+	exportObj(obj_file_name, Points2DAll, P);
+#endif
 
-	writeObjFile("../../data/ptsSrc_Pmat.obj", pointsSrc, Pmat);
-	//P.first.setIdentity();
-	//P.second = Pmat;
-	writeObjFile("../../data/ptsNorm_Pmat.obj", pointsNorm, Pmat);
-	writeObjFile("../../data/ptsSrc_First.obj", pointsSrc, P.first);
-	writeObjFile("../../data/ptsSrc_Second.obj", pointsSrc, P.second);
-	writeObjFile("../../data/ptsNorm_First.obj", pointsNorm, P.first);
-	writeObjFile("../../data/ptsNorm_Second.obj", pointsNorm, P.second);
-
-
-	//testObjPoints("../../data/thai-lion/thai-lion.obj", "../../data/proj.obj", P.first);
-
-
-	std::cout << "Error x'Fx=0  : " << Reconstruction3D::computeError(points, F) << std::endl;
-	std::cout << "Error x'FnX=0 : " << Reconstruction3D::computeError(points, Fn) << std::endl << std::endl;
-
-	//QImageWidget outputWidget;
-	//outputWidget.setImage(outputImage);
-	//outputWidget.show();
-	//return app.exec();
 	return EXIT_SUCCESS;
 }

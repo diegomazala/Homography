@@ -217,49 +217,6 @@ int main(int argc, char* argv[])
 	//return 0;
 
 
-	P = Reconstruction3D::Ransac::solve(Points2DAll, K);
-
-	std::string obj_file_name = "../../data/ThaiLion_RANSAC.obj";
-	std::cout
-		<< std::endl << std::endl
-		<< "[Info]  Exporting : " << obj_file_name << " ..." << std::endl << std::endl;
-		//<< P.second << std::endl;
-	//exportObj(obj_file_name, Points2D, P);
-	exportObj(obj_file_name, Points2DAll, P);
-
-	return 0;
-
-#if 0
-	std::vector<std::string> imageFiles;
-	std::string pointsFile;
-
-	for (int i = 0; i < argc; ++i)
-	{
-		std::string str = argv[i];
-
-		if (str.find(".png") != std::string::npos || str.find(".PNG") != std::string::npos ||
-			str.find(".jpg") != std::string::npos || str.find(".JPG") != std::string::npos ||
-			str.find(".bmp") != std::string::npos || str.find(".BMP") != std::string::npos)
-			imageFiles.push_back(str);
-
-		if (str.find(".txt") != std::string::npos)
-			pointsFile = str;
-	}
-	//
-	// Reading points from file
-	//
-	if (!Points::readFromFile(pointsFile, Points2D))
-	{
-		std::cout << "[Error] Could not read points from file: " << pointsFile << std::endl;
-		return EXIT_FAILURE;
-	}
-	else
-	{
-		std::cout << "[Info]  Count of points loaded from file = " << Points2D.size() << std::endl;
-	}
-#endif
-
-
 	//
 	// Normalize points
 	// 
@@ -323,7 +280,6 @@ int main(int argc, char* argv[])
 	//std::cout << "Error Points2DNorm x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, E) << std::endl;
 
 	
-#if 0
 	///////////////////////////////////////////////////////////////////////////////////////
 	//
 	// Compute P matrix
@@ -331,18 +287,11 @@ int main(int argc, char* argv[])
 	P.first = Eigen::MatrixXd::Identity(3, 4);
 	P.first.block(0, 0, 3, 3) = K.first;
 	//
-	Eigen::MatrixXd P2 = Reconstruction3D::computeP(Points2DNorm, E);
-	P.second = K.second * P2;
-	//
+	std::vector<Eigen::MatrixXd> P_solutions;
+	Reconstruction3D::computeP(Points2DNorm, E, P_solutions);
 	
-	std::string obj_file_name = "../../data/ThaiLion_solution.obj";
-	std::cout
-		<< std::endl << std::endl
-		<< "[Info]  Exporting : " << obj_file_name << " ..." << std::endl << std::endl
-		<< P.second << std::endl;
-	//exportObj(obj_file_name, Points2D, P);
-	exportObj(obj_file_name, Points2DAll, P);
-#endif
+	exportPSolutions(P_solutions, Points2DAll);
 
+	
 	return EXIT_SUCCESS;
 }

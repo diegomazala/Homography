@@ -589,52 +589,128 @@ void Reconstruction3D::QRdecomposition(Eigen::MatrixXd A, Eigen::Matrix3d &R, Ei
 
 
 
-std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Reconstruction3D::Ransac::solve(
-												const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
-												const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K)
+ReconstructionDLT Reconstruction3D::solve(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+											const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K, 
+											int maxIterations)
 {
 	std::pair<Eigen::MatrixXd, Eigen::MatrixXd>	P(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
-	const int maxIterations = 10;
+
+	std::vector<ReconstructionDLT> dltArray;
 
 	for (int it = 0; it < maxIterations; ++it)
 	{
 		std::vector<int> indices = RansacDLT::random4Indices(0, (int)pts.size() - 1);
 
 		// copy points from original array to the 4-array to be used for reconstruction
-		std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points2D, points2DNorm;
+		std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points2D;
 		for each (auto i in indices)
 			points2D.push_back(pts[i]);
 
-		//
-		// Normalize points
-		// 
-		std::pair<Eigen::Matrix3d, Eigen::Matrix3d> T = DLT::normalizePoints(points2D, points2DNorm);
 
-		//
-		// Compute F matrix
-		//
-		Eigen::MatrixXd Fn = Reconstruction3D::computeF(points2DNorm);
-		Fn = Reconstruction3D::applyConstraint(Fn);
-		Eigen::MatrixXd F = DLT::denormalizeH(Fn, T);
+		dltArray.push_back(ReconstructionDLT(points2D, K));
+		ReconstructionDLT& dlt = dltArray.back();
 
-		//
-		// Compute E matrix
-		//
-		Eigen::MatrixXd E = Reconstruction3D::computeE(K, F);
+		dlt.solve();
 
-		//std::vector<Eigen::MatrixXd> P_solutions;
-		//Reconstruction3D::computeP(points2DNorm, E, P_solutions);
-
-		P.first = Eigen::MatrixXd::Identity(3, 4);
-		P.first.block(0, 0, 3, 3) = K.first;
-
-		//Eigen::MatrixXd P2 = Reconstruction3D::selectBestP(points2D, K, P_solutions);
-		Eigen::MatrixXd P2 = Reconstruction3D::computeP(points2DNorm, E);
-		P.second = K.second * P2;
-
-
-		std::cout << "Geometric Error: " << Reconstruction3D::computeGeometricError(points2DNorm, P) << std::endl;
+		std::cout << it << " : " << dlt.error << " , " << dlt.inliersCount << std::endl;
 	}
 
-	return P;
+
+	std::sort(dltArray.begin(), dltArray.end());
+
+
+	return dltArray.front();
+}
+
+
+
+
+
+ReconstructionDLT::ReconstructionDLT(
+		const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+		const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& _K):
+		points2D(pts),
+		K(_K), 
+		inliersCount(0)
+{
+
+}
+
+void ReconstructionDLT::solve(double outlierThreshold)
+{
+	P = std::make_pair(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
+
+	//
+	// Normalize points
+	// 
+	std::pair<Eigen::Matrix3d, Eigen::Matrix3d> T = DLT::normalizePoints(points2D, points2DNorm);
+
+	//
+	// Compute F matrix
+	//
+	Eigen::MatrixXd Fn = Reconstruction3D::computeF(points2DNorm);
+	Fn = Reconstruction3D::applyConstraint(Fn);
+	Eigen::MatrixXd F = DLT::denormalizeH(Fn, T);
+
+	//
+	// Compute E matrix
+	//
+	Eigen::MatrixXd E = Reconstruction3D::computeE(K, F);
+
+	//std::vector<Eigen::MatrixXd> P_solutions;
+	//Reconstruction3D::computeP(points2DNorm, E, P_solutions);
+
+	P.first = Eigen::MatrixXd::Identity(3, 4);
+	//P.first.block(0, 0, 3, 3) = K.first;
+
+	//Eigen::MatrixXd P2 = Reconstruction3D::selectBestP(points2D, K, P_solutions);
+	Eigen::MatrixXd P2 = Reconstruction3D::computeP(points2DNorm, E);
+	//P.second = K.second * P2;
+	P.second = P2;
+
+	//error = Reconstruction3D::computeGeometricError(points2DNorm, P);
+	//std::cout << "Geometric Error: " << Reconstruction3D::computeGeometricError(points2DNorm, P) << std::endl;
+
+	inliersCount = 0;
+	error = 0;
+	for (const auto x : points2DNorm)
+	{
+		Eigen::Vector3d x0 = x.first.homogeneous();
+		Eigen::Vector3d x1 = x.second.homogeneous();
+
+		Eigen::VectorXd X = Triangulation::solve(P, x);
+
+		Eigen::Vector3d xx0 = P.first * X;
+		Eigen::Vector3d xx1 = P.second * X;
+
+		xx0 /= xx0[2];
+		xx1 /= xx1[2];
+
+		double d0 = Eigen::Vector3d(x0 - xx0).norm();
+		double d1 = Eigen::Vector3d(x1 - xx1).norm();
+
+		//std::cout << std::fixed << "x0, x1   : " << x0.transpose() << '\t' << x1.transpose() << std::endl;
+		//std::cout << std::fixed << "xx0, xx1 : " << xx0.transpose() << '\t' << xx1.transpose() << std::endl;
+		//std::cout << "d0, d1 : " << d0 << ", " << d1 << std::endl;
+
+		//error += d0 * d0 + d1 * d1;
+		double localError = d0 + d1;
+
+		if (localError < outlierThreshold)
+			++inliersCount;
+
+		error += localError;
+	}
+	//std::cout << "Sum Error: " << error << std::endl << std::endl;
+
+	P.first.block(0, 0, 3, 3) = K.first;
+	P.second = K.second * P2;
+}
+
+
+bool ReconstructionDLT::operator < (ReconstructionDLT const &other)
+{
+	//	return (this->inliers > other.inliers) && (this->error.first + this->error.second) < (other.error.first + other.error.second);
+	//	return (this->error.first + this->error.second) < (other.error.first + other.error.second);
+	return (this->inliersCount) > (other.inliersCount) && (this->error) < (other.error);
 }
