@@ -176,6 +176,29 @@ void exportPointCorrespondence(const std::string& filename, const std::vector<st
 }
 
 
+void exportPSolutions(const std::vector<Eigen::MatrixXd>& P_solutions, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points2D)
+{
+	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> P_mat;
+	P_mat.first = Eigen::MatrixXd::Identity(3, 4);
+	P_mat.first.block(0, 0, 3, 3) = K.first;
+
+	int i = 0;
+	for (auto m : P_solutions)
+	{
+		++i;
+
+		P_mat.second = K.second * m;
+
+		std::cout
+			<< std::endl << std::endl
+			<< "[Info]  Exporting : ThaiLion_" << i << ".obj ..." << std::endl << std::endl;
+		std::string obj_file_name = "../../data/ThaiLion_" + std::to_string(i) + ".obj";
+		exportObj(obj_file_name, points2D, P_mat);
+	}
+}
+
+
+
 int main(int argc, char* argv[])
 {
 	setupMatrices();
@@ -239,8 +262,8 @@ int main(int argc, char* argv[])
 	Eigen::MatrixXd Fn = Reconstruction3D::computeF(Points2DNorm);
 	//Eigen::MatrixXd Fn = Reconstruction3D::computeF(Points2D);
 	
-	std::cout << "Error Points2D     x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
-	std::cout << "Error Points2DNorm x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, Fn) << std::endl;
+	//std::cout << "Error Points2D     x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
+	//std::cout << "Error Points2DNorm x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, Fn) << std::endl;
 
 	//std::cout
 	//	<< std::endl << std::fixed
@@ -249,8 +272,8 @@ int main(int argc, char* argv[])
 
 	Fn = Reconstruction3D::applyConstraint(Fn);
 
-	std::cout << "Error Points2D     F_Constrained x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
-	std::cout << "Error Points2DNorm F_Constrained x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, Fn) << std::endl;
+	//std::cout << "Error Points2D     F_Constrained x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
+	//std::cout << "Error Points2DNorm F_Constrained x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, Fn) << std::endl;
 
 	// 
 	// Denormalize F matrix
@@ -259,13 +282,13 @@ int main(int argc, char* argv[])
 	//Eigen::MatrixXd F = Fn;
 
 	
-	std::cout
-		<< std::endl << std::fixed
-		<< "F constrained and denormalized: " << std::endl
-		<< F << std::endl << std::endl;
+	//std::cout
+	//	<< std::endl << std::fixed
+	//	<< "F constrained and denormalized: " << std::endl
+	//	<< F << std::endl << std::endl;
 
-	std::cout << "Error Points2D     x'Fx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, F) << std::endl;
-	std::cout << "Error Points2DNorm x'Fx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, F) << std::endl;
+	//std::cout << "Error Points2D     x'Fx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, F) << std::endl;
+	//std::cout << "Error Points2DNorm x'Fx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, F) << std::endl;
 	
 
 
@@ -279,13 +302,13 @@ int main(int argc, char* argv[])
 
 
 	Eigen::MatrixXd E = Reconstruction3D::computeE(K, F);
-	std::cout
-		<< std::endl << std::fixed
-		<< "E: " << std::endl
-		<< E << std::endl << std::endl;
+	//std::cout
+	//	<< std::endl << std::fixed
+	//	<< "E: " << std::endl
+	//	<< E << std::endl << std::endl;
 	
-	std::cout << "Error Points2D     x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, E) << std::endl;
-	std::cout << "Error Points2DNorm x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, E) << std::endl;
+	//std::cout << "Error Points2D     x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, E) << std::endl;
+	//std::cout << "Error Points2DNorm x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, E) << std::endl;
 
 	
 	///////////////////////////////////////////////////////////////////////////////////////
@@ -300,25 +323,17 @@ int main(int argc, char* argv[])
 	P.first = Eigen::MatrixXd::Identity(3, 4);
 	P.first.block(0, 0, 3, 3) = K.first;
 
-	int i = 0;
-	for (auto m : P_solutions)
-	{
-		++i;
-
-		P.second = K.second * m;
-
-		std::cout
-			<< std::endl << std::endl
-			<< "[Info]  Exporting : ThaiLion_" << i << ".obj ..." << std::endl << std::endl
-			<< "[Info]  P Solution " << i << std::endl
-			<< P.second << std::endl;
-		std::string obj_file_name = "../../data/ThaiLion_" + std::to_string(i) + ".obj";
-		//exportObj(obj_file_name, Points2D, P);
-		exportObj(obj_file_name, Points2DAll, P);
-
-	}
-
+	Eigen::MatrixXd P2 = Reconstruction3D::selectBestP(Points2D, K, P_solutions);
+	P.second = K.second * P2;
 	
+	std::string obj_file_name = "../../data/ThaiLion_solution.obj";
+	std::cout
+		<< std::endl << std::endl
+		<< "[Info]  Exporting : " << obj_file_name << " ..." << std::endl << std::endl
+		<< P.second << std::endl;
+	//exportObj(obj_file_name, Points2D, P);
+	exportObj(obj_file_name, Points2DAll, P);
+
 
 	return EXIT_SUCCESS;
 }

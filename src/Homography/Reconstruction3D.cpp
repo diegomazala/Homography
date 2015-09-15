@@ -98,19 +98,19 @@ Eigen::MatrixXd Reconstruction3D::computeF(const std::vector<std::pair<Eigen::Ve
 Eigen::MatrixXd Reconstruction3D::computeE(const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K, const Eigen::MatrixXd& F)
 {
 	Eigen::MatrixXd E = K.second.transpose() * F * K.first;
-	
-	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
-	Eigen::VectorXd singularValues = svd.singularValues();
-	Eigen::DiagonalMatrix< double, 3, 3 > diagonal(1, 1, 0);
-	Eigen::MatrixXd D = diagonal.toDenseMatrix();
-	Eigen::MatrixXd constrainedMat = svd.matrixU() * D * svd.matrixV().transpose();
-	E = constrainedMat;
+	//E /= E(2, 2);	// o erro aumenta
+	//Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
+	//Eigen::VectorXd singularValues = svd.singularValues();
+	//Eigen::DiagonalMatrix< double, 3, 3 > diagonal(1, 1, 0);
+	//Eigen::MatrixXd D = diagonal.toDenseMatrix();
+	//Eigen::MatrixXd constrainedMat = svd.matrixU() * D * svd.matrixV().transpose();
+	//E = constrainedMat;
 
 	//std::cout << std::fixed
 	//	<< "E In  determinant : " << F.determinant() << std::endl
 	//	<< "E Out determinant : " << constrainedMat.determinant() << std::endl << std::endl;
 
-	//E /= E(2, 2);	// o erro aumenta
+	
 	return E;
 }
 
@@ -399,6 +399,64 @@ void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eig
 }
 
 
+Eigen::MatrixXd Reconstruction3D::selectBestP(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points2D,
+												const std::pair<Eigen::Matrix3d, Eigen::Matrix3d>& K,
+												const std::vector<Eigen::MatrixXd>& P_solutions)
+{
+	std::pair<Eigen::MatrixXd, Eigen::MatrixXd>	P(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
+	
+	P.first = Eigen::MatrixXd::Identity(3, 4);
+	P.first.block(0, 0, 3, 3) = K.first;
+
+	
+	int bestChoice = 0;
+	double minError = FLT_MAX;
+
+	int solution = 0;
+	for (auto m : P_solutions)
+	{
+		double error = 0;
+		//P.second = m;
+		P.second = K.second * m;
+
+		P.second /= P.second(2, 2);
+
+		for (int i = 0; i < points2D.size(); ++i)
+		{
+			const auto& x = points2D[i];
+			Eigen::Vector3d x0 = x.first.homogeneous();
+			Eigen::Vector3d x1 = x.second.homogeneous();
+
+			const Eigen::VectorXd& X = Triangulation::solve(P, x);
+
+			Eigen::Vector3d xx0 = P.first * X;
+			Eigen::Vector3d xx1 = P.second * X;
+
+			xx0 /= xx0[2];
+			xx1 /= xx1[2];
+
+			//std::cout
+			//	<< std::fixed << i << " : " << x0.transpose() << '\t' << x1.transpose() << std::endl
+			//	<< std::fixed << i << " : " << xx0.transpose() << '\t' << xx1.transpose() << std::endl << std::endl;
+
+			double d0 = (x0 - xx0).norm();
+			double d1 = (x1 - xx1).norm();
+
+			//error += d0 * d0 + d1 * d1;
+			error += d0 + d1;
+		}
+
+		if (error < minError)
+			bestChoice = solution;
+
+		++solution;
+		//std::cout << std::endl << "Error: " << error << std::endl << std::endl;
+	}
+
+	return P_solutions[bestChoice];
+}
+
+
 double Reconstruction3D::computeError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& F)
 {
 	double error = 0;
@@ -409,6 +467,32 @@ double Reconstruction3D::computeError(const std::vector<std::pair<Eigen::Vector2
 		Eigen::Vector3d x1 = x.second.homogeneous();
 
 		error += x1.transpose() * F * x0;
+	}
+
+	return error;
+}
+
+
+double Reconstruction3D::computeGeometricError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& P)
+{
+	double error = 0;
+
+	for (const auto x : pts)
+	{
+#if 0
+		Eigen::Vector3d x0 = x.first.homogeneous();
+		Eigen::Vector3d x1 = x.second.homogeneous();
+
+		Eigen::VectorXd X = Triangulation::solve(P, x);
+
+		Eigen::Vector3d xx0 = P.first * x1;
+		Eigen::Vector3d xx1 = P.second * x0;
+
+		double d0 = Eigen::Vector3d(x0 - xx0).norm();
+		double d1 = Eigen::Vector3d(x1 - xx1).norm();
+
+		error += d0 * d0 + d1 * d1;
+#endif
 	}
 
 	return error;
