@@ -12,7 +12,9 @@ public:
 	class Ransac
 	{
 	public:
-
+		static std::pair<Eigen::MatrixXd, Eigen::MatrixXd> solve(
+									const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+									const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K);
 
 	};
 	

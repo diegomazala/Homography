@@ -217,6 +217,18 @@ int main(int argc, char* argv[])
 	//return 0;
 
 
+	P = Reconstruction3D::Ransac::solve(Points2DAll, K);
+
+	std::string obj_file_name = "../../data/ThaiLion_RANSAC.obj";
+	std::cout
+		<< std::endl << std::endl
+		<< "[Info]  Exporting : " << obj_file_name << " ..." << std::endl << std::endl;
+		//<< P.second << std::endl;
+	//exportObj(obj_file_name, Points2D, P);
+	exportObj(obj_file_name, Points2DAll, P);
+
+	return 0;
+
 #if 0
 	std::vector<std::string> imageFiles;
 	std::string pointsFile;
@@ -311,20 +323,17 @@ int main(int argc, char* argv[])
 	//std::cout << "Error Points2DNorm x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, E) << std::endl;
 
 	
+#if 0
 	///////////////////////////////////////////////////////////////////////////////////////
 	//
 	// Compute P matrix
 	//
-	//Eigen::MatrixXd Pmat = Reconstruction3D::computeP(Points2DNorm, E);
-	//Pmat /= Pmat(2, 2);
-	std::vector<Eigen::MatrixXd> P_solutions;
-	Reconstruction3D::computeP(Points2DNorm, E, P_solutions);
-
 	P.first = Eigen::MatrixXd::Identity(3, 4);
 	P.first.block(0, 0, 3, 3) = K.first;
-
-	Eigen::MatrixXd P2 = Reconstruction3D::selectBestP(Points2D, K, P_solutions);
+	//
+	Eigen::MatrixXd P2 = Reconstruction3D::computeP(Points2DNorm, E);
 	P.second = K.second * P2;
+	//
 	
 	std::string obj_file_name = "../../data/ThaiLion_solution.obj";
 	std::cout
@@ -333,7 +342,7 @@ int main(int argc, char* argv[])
 		<< P.second << std::endl;
 	//exportObj(obj_file_name, Points2D, P);
 	exportObj(obj_file_name, Points2DAll, P);
-
+#endif
 
 	return EXIT_SUCCESS;
 }

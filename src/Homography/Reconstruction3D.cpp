@@ -1,5 +1,6 @@
 #include "Reconstruction3D.h"
 #include "Triangulation.h"
+#include "RansacDLT.h"
 #include <iostream>
 #include <limits>
 #include <iomanip>
@@ -242,7 +243,7 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 	P1.block(0, 0, 3, 3) = P1noT;
 	P1.block(0, 3, 3, 1) = u3;
 
-	Eigen::MatrixXd bestP1;
+	Eigen::MatrixXd bestP1 = P0;
 	int numCorrectSolutions = 0;
 	if (checkP(pts, P0, P1))
 	{
@@ -479,7 +480,6 @@ double Reconstruction3D::computeGeometricError(const std::vector<std::pair<Eigen
 
 	for (const auto x : pts)
 	{
-#if 0
 		Eigen::Vector3d x0 = x.first.homogeneous();
 		Eigen::Vector3d x1 = x.second.homogeneous();
 
@@ -488,11 +488,14 @@ double Reconstruction3D::computeGeometricError(const std::vector<std::pair<Eigen
 		Eigen::Vector3d xx0 = P.first * x1;
 		Eigen::Vector3d xx1 = P.second * x0;
 
+		xx0 /= xx0[2];
+		xx1 /= xx1[2];
+
 		double d0 = Eigen::Vector3d(x0 - xx0).norm();
 		double d1 = Eigen::Vector3d(x1 - xx1).norm();
 
-		error += d0 * d0 + d1 * d1;
-#endif
+		//error += d0 * d0 + d1 * d1;
+		error += d0 + d1;
 	}
 
 	return error;
@@ -582,4 +585,56 @@ void Reconstruction3D::QRdecomposition(Eigen::MatrixXd A, Eigen::Matrix3d &R, Ei
 		<< std::endl << std::fixed
 		<< "Q: " << std::endl
 		<< Q << std::endl << std::endl;
+}
+
+
+
+std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Reconstruction3D::Ransac::solve(
+												const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+												const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K)
+{
+	std::pair<Eigen::MatrixXd, Eigen::MatrixXd>	P(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
+	const int maxIterations = 10;
+
+	for (int it = 0; it < maxIterations; ++it)
+	{
+		std::vector<int> indices = RansacDLT::random4Indices(0, (int)pts.size() - 1);
+
+		// copy points from original array to the 4-array to be used for reconstruction
+		std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points2D, points2DNorm;
+		for each (auto i in indices)
+			points2D.push_back(pts[i]);
+
+		//
+		// Normalize points
+		// 
+		std::pair<Eigen::Matrix3d, Eigen::Matrix3d> T = DLT::normalizePoints(points2D, points2DNorm);
+
+		//
+		// Compute F matrix
+		//
+		Eigen::MatrixXd Fn = Reconstruction3D::computeF(points2DNorm);
+		Fn = Reconstruction3D::applyConstraint(Fn);
+		Eigen::MatrixXd F = DLT::denormalizeH(Fn, T);
+
+		//
+		// Compute E matrix
+		//
+		Eigen::MatrixXd E = Reconstruction3D::computeE(K, F);
+
+		//std::vector<Eigen::MatrixXd> P_solutions;
+		//Reconstruction3D::computeP(points2DNorm, E, P_solutions);
+
+		P.first = Eigen::MatrixXd::Identity(3, 4);
+		P.first.block(0, 0, 3, 3) = K.first;
+
+		//Eigen::MatrixXd P2 = Reconstruction3D::selectBestP(points2D, K, P_solutions);
+		Eigen::MatrixXd P2 = Reconstruction3D::computeP(points2DNorm, E);
+		P.second = K.second * P2;
+
+
+		std::cout << "Geometric Error: " << Reconstruction3D::computeGeometricError(points2DNorm, P) << std::endl;
+	}
+
+	return P;
 }
