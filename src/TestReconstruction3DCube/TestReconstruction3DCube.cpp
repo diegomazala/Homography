@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
 	// 
 	// Denormalize F matrix
 	//
-	Eigen::MatrixXd F = DLT::denormalizeH(Fn, T);
+	Eigen::MatrixXd F = DLT::denormalizeUsingTranspose(Fn, T);
 
 	
 	std::cout

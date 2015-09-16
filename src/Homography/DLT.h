@@ -47,7 +47,8 @@ public:
 
 	static std::pair<Eigen::Vector2d, Eigen::Vector2d> findCentroid(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points);
 
-	static Eigen::MatrixXd denormalizeH(const Eigen::Matrix3d& H, const std::pair<Eigen::Matrix3d, Eigen::Matrix3d>& normalizationTransform);
+	static Eigen::MatrixXd denormalizeUsingInverse(const Eigen::Matrix3d& H, const std::pair<Eigen::Matrix3d, Eigen::Matrix3d>& normalizationTransform);
+	static Eigen::MatrixXd denormalizeUsingTranspose(const Eigen::Matrix3d& H, const std::pair<Eigen::Matrix3d, Eigen::Matrix3d>& normalizationTransform);
 
 	static std::pair<double, double> computeGeometricError(const Eigen::MatrixXd H, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points);
 

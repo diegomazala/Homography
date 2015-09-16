@@ -50,7 +50,7 @@ Eigen::MatrixXd DLT::computeHomography()
 	{
 		normalizationTransform = normalizePoints(points, normalizedPoints);
 		Eigen::MatrixXd Hn = computeHomography(normalizedPoints);
-		this->H = denormalizeH(Hn, normalizationTransform);
+		this->H = denormalizeUsingInverse(Hn, normalizationTransform);
 	}
 	else
 	{
@@ -72,9 +72,15 @@ std::pair<double, double> DLT::computeGeometricError()
 
 
 
-Eigen::MatrixXd DLT::denormalizeH(const Eigen::Matrix3d& H, const std::pair<Eigen::Matrix3d, Eigen::Matrix3d>& normalizationTransform)
+Eigen::MatrixXd DLT::denormalizeUsingInverse(const Eigen::Matrix3d& H, const std::pair<Eigen::Matrix3d, Eigen::Matrix3d>& normalizationTransform)
 {
 	return normalizationTransform.second.inverse() * H * normalizationTransform.first;
+	//return normalizationTransform.second.transpose() * H * normalizationTransform.first;
+}
+
+Eigen::MatrixXd DLT::denormalizeUsingTranspose(const Eigen::Matrix3d& H, const std::pair<Eigen::Matrix3d, Eigen::Matrix3d>& normalizationTransform)
+{
+	return normalizationTransform.second.transpose() * H * normalizationTransform.first;
 }
 
 

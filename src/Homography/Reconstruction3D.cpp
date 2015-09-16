@@ -36,8 +36,8 @@ Eigen::MatrixXd Reconstruction3D::applyConstraint(const Eigen::MatrixXd& inputMa
 	//Eigen::JacobiSVD<Eigen::MatrixXd> svd(inputMat, Eigen::ComputeFullU | Eigen::ComputeFullV);
 	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(inputMat, Eigen::ComputeFullU | Eigen::ComputeFullV);
 	Eigen::VectorXd singularValues = svd.singularValues();
-	double singularValue = (singularValues[0] + singularValues[1]) * 0.5;
-	Eigen::DiagonalMatrix< double, 3, 3 > diagonal(singularValue, singularValue, 0.0);
+	//double singularValue = (singularValues[0] + singularValues[1]) * 0.5;
+	Eigen::DiagonalMatrix< double, 3, 3 > diagonal(singularValues(0), singularValues(1), 0.0);
 	Eigen::MatrixXd D = diagonal.toDenseMatrix();
 	Eigen::MatrixXd constrainedMat = svd.matrixU() * D * svd.matrixV().transpose();
 
@@ -100,12 +100,12 @@ Eigen::MatrixXd Reconstruction3D::computeE(const std::pair<Eigen::MatrixXd, Eige
 {
 	Eigen::MatrixXd E = K.second.transpose() * F * K.first;
 	//E /= E(2, 2);	// o erro aumenta
-	//Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
-	//Eigen::VectorXd singularValues = svd.singularValues();
-	//Eigen::DiagonalMatrix< double, 3, 3 > diagonal(1, 1, 0);
-	//Eigen::MatrixXd D = diagonal.toDenseMatrix();
-	//Eigen::MatrixXd constrainedMat = svd.matrixU() * D * svd.matrixV().transpose();
-	//E = constrainedMat;
+	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
+	Eigen::VectorXd singularValues = svd.singularValues();
+	Eigen::DiagonalMatrix< double, 3, 3 > diagonal(1, 1, 0);
+	Eigen::MatrixXd D = diagonal.toDenseMatrix();
+	Eigen::MatrixXd constrainedMat = svd.matrixU() * D * svd.matrixV().transpose();
+	E = constrainedMat;
 
 	//std::cout << std::fixed
 	//	<< "E In  determinant : " << F.determinant() << std::endl
@@ -691,7 +691,7 @@ void ReconstructionDLT::solve(double outlierThreshold)
 	//
 	Eigen::MatrixXd Fn = Reconstruction3D::computeF(points2DNorm);
 	Fn = Reconstruction3D::applyConstraint(Fn);
-	Eigen::MatrixXd F = DLT::denormalizeH(Fn, T);
+	Eigen::MatrixXd F = DLT::denormalizeUsingTranspose(Fn, T);
 
 	//
 	// Compute E matrix
