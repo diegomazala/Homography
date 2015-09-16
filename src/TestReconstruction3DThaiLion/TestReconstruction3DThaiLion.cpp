@@ -232,7 +232,8 @@ int main(int argc, char* argv[])
 	//Eigen::MatrixXd Fn = Reconstruction3D::computeF(Points2D);
 	
 	//std::cout << "Error Points2D     x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
-	//std::cout << "Error Points2DNorm x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, Fn) << std::endl;
+	//std::cout << "Error Points2DNorm x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, Fn) << std::endl << std::endl;
+
 
 	//std::cout
 	//	<< std::endl << std::fixed
@@ -285,7 +286,7 @@ int main(int argc, char* argv[])
 	// Compute P matrix
 	//
 	P.first = Eigen::MatrixXd::Identity(3, 4);
-	//P.first.block(0, 0, 3, 3) = K.first;
+	P.first.block(0, 0, 3, 3) = K.first;
 	//
 	std::vector<Eigen::MatrixXd> P_solutions;
 	Reconstruction3D::computeP(Points2DNorm, E, P_solutions);
@@ -301,21 +302,7 @@ int main(int argc, char* argv[])
 	for (auto m : P_solutions)
 	{
 		++i;
-		P.second = m;
-
-		int inliersCount = 0;
-		double error = Reconstruction3D::computeGeometricError(Points2DNorm, P, 20.0, inliersCount);
-
-		//if (error < minError && inliersCount < minInliers)
-		if (inliersCount < minInliers)
-		{
-			minInliers = inliersCount;
-			minError = error;
-			bestChoice = i;
-		}
-
-		P.first.block(0, 0, 3, 3) = K.first;
-		P.second = K.second * P.second;
+		P.second = K.second * m;
 
 		std::cout
 			<< std::endl << std::endl
@@ -324,7 +311,5 @@ int main(int argc, char* argv[])
 		exportObj(obj_file_name, Points2DAll, P);
 	}
 
-	std::cout << "Best Choice using inliers : " << bestChoice + 1 << std::endl;
-	
 	return EXIT_SUCCESS;
 }

@@ -64,9 +64,11 @@ public:
 	static Eigen::MatrixXd selectBestP(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points2D,
 										const std::pair<Eigen::Matrix3d, Eigen::Matrix3d>& K,
 										const std::vector<Eigen::MatrixXd>& P_solutions);
+	
+	static double pointLineDistance(Eigen::Vector2d point, Eigen::Vector3d line);
 
 	static double computeError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& F);
-	static double computeGeometricError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& P, double outlierThreshold, int& inliers);
+	//static double computeGeometricError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& P, double outlierThreshold, int& inliers);
 
 	static void solveCS(float &c, float &s, float a, float b);
 	static void RQdecomposition(Eigen::MatrixXd A, Eigen::Matrix3d &R, Eigen::Matrix3d &Q);

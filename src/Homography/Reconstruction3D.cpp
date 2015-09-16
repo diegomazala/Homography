@@ -458,6 +458,21 @@ Eigen::MatrixXd Reconstruction3D::selectBestP(	const std::vector<std::pair<Eigen
 }
 
 
+double Reconstruction3D::pointLineDistance(Eigen::Vector2d point, Eigen::Vector3d line)
+{
+	const double x = point[0];
+	const double y = point[1];
+	const double a = line[0];
+	const double b = line[1];
+	const double c = line[2];
+
+	const double num = std::abs(a * x + b * y + c);
+	const double den = std::sqrt(a * a + b * b);
+
+	return num / den;
+}
+
+
 double Reconstruction3D::computeError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& F)
 {
 	double error = 0;
@@ -467,13 +482,26 @@ double Reconstruction3D::computeError(const std::vector<std::pair<Eigen::Vector2
 		Eigen::Vector3d x0 = x.first.homogeneous();
 		Eigen::Vector3d x1 = x.second.homogeneous();
 
-		error += x1.transpose() * F * x0;
+		Eigen::Vector3d l0 = F.transpose() * x1;
+		Eigen::Vector3d l1 = F * x0;
+
+		double d0 = pointLineDistance(x.first, l0);
+		double d1 = pointLineDistance(x.second, l1);
+		double d = d0 * d0 + d1 * d1;
+
+		//std::cout
+		//	<< std::fixed
+		//	<< x0.transpose() << '\t' << x1.transpose() << std::endl
+		//	<< l0.transpose() << '\t' << l1.transpose() << std::endl
+		//	<< "distance: " << d << '\t' << d0 << '\t' << d1 << std::endl << std::endl;
+
+		error += d;
 	}
 
 	return error;
 }
 
-
+#if 0
 double Reconstruction3D::computeGeometricError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& P, double outlierThreshold, int& inliers)
 {
 	double error = 0;
@@ -513,7 +541,7 @@ double Reconstruction3D::computeGeometricError(const std::vector<std::pair<Eigen
 
 	return error;
 }
-
+#endif
 
 void Reconstruction3D::solveCS(float &c, float &s, float a, float b)
 {
