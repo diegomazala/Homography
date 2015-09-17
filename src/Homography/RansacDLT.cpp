@@ -33,7 +33,7 @@ DLT RansacDLT::solve(const Points& points)
 		std::cout << std::endl
 			<< "[Info]  Iteration = " << i << std::endl
 			<< "[Info]  Random 4 indices = ";
-		std::vector<int> indices = random4Indices(0, (int)points.count() - 1);
+		std::vector<int> indices = randomIndices(4, 0, (int)points.count() - 1);
 
 		// copy points from original array to the 4-array to be used for homography
 		for each (auto i in indices)
@@ -90,17 +90,16 @@ DLT RansacDLT::solve(const Points& points)
 
 
 
-std::vector<int> RansacDLT::random4Indices(int min, int max)
+std::vector<int> RansacDLT::randomIndices(int count, int min, int max)
 {
 	std::random_device rd;								// obtain a random number from hardware
 	std::default_random_engine eng(rd());				// seed the generator
 	std::uniform_int_distribution<int> distr(min, max); // define the range
 
 	std::vector<int> indices;
-	indices.push_back(distr(eng));
-	indices.push_back(distr(eng));
-	indices.push_back(distr(eng));
-	indices.push_back(distr(eng));
+
+	for (int i = 0; i < count; ++i)
+		indices.push_back(distr(eng));
 
 
 	// Check if there are repeated indices

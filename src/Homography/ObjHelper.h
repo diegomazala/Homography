@@ -60,7 +60,7 @@ static void exportObj(const std::string& filename, const std::vector<Eigen::Vect
 	file.open(filename);
 	for (const auto X : points3D)
 	{
-		file << "v " << X.transpose() << std::endl;
+		file << std::fixed << "v " << X.transpose() << std::endl;
 	}
 	file.close();
 }
@@ -72,7 +72,7 @@ static void exportObj(const std::string& filename, const std::vector<std::pair<E
 	for (const auto x : points2D)
 	{
 		const Eigen::VectorXd& X = Triangulation::solve(P, x);
-		file << "v " << X.transpose() << std::endl;
+		file << std::fixed << "v " << X.transpose() << std::endl;
 	}
 	file.close();
 }
@@ -83,13 +83,13 @@ static void exportObj(const std::string& filename1, const std::string& filename2
 	file.open(filename1);
 	for (const auto x : points2D)
 	{
-		file << "v " << x.first.homogeneous().transpose() << std::endl;
+		file << std::fixed << "v " << x.first.homogeneous().transpose() << std::endl;
 	}
 	file.close();
 	file.open(filename2);
 	for (const auto x : points2D)
 	{
-		file << "v " << x.second.homogeneous().transpose() << std::endl;
+		file << std::fixed << "v " << x.second.homogeneous().transpose() << std::endl;
 	}
 	file.close();
 }
@@ -102,7 +102,7 @@ static void exportCubeObj(const std::string& filename, const std::vector<Eigen::
 	file.open(filename);
 	for (const auto X : points3D)
 	{
-		file << "v " << X.transpose() << std::endl;
+		file << std::fixed << "v " << X.transpose() << std::endl;
 	}
 
 	file
@@ -122,7 +122,7 @@ static void exportCubeObj(const std::string& filename, const std::vector<std::pa
 	for (const auto x : points2D)
 	{
 		const Eigen::VectorXd& X = Triangulation::solve(P, x);
-		file << "v " << X.transpose() << std::endl;
+		file << std::fixed << "v " << X.transpose() << std::endl;
 	}
 
 	file

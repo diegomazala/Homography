@@ -12,7 +12,7 @@ class RansacDLT
 public:
 
 	static DLT solve(const Points& points);
-	static std::vector<int> random4Indices(int min, int max);
+	static std::vector<int> randomIndices(int count, int min, int max);
 };
 
 

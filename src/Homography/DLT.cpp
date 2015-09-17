@@ -75,7 +75,6 @@ std::pair<double, double> DLT::computeGeometricError()
 Eigen::MatrixXd DLT::denormalizeUsingInverse(const Eigen::Matrix3d& H, const std::pair<Eigen::Matrix3d, Eigen::Matrix3d>& normalizationTransform)
 {
 	return normalizationTransform.second.inverse() * H * normalizationTransform.first;
-	//return normalizationTransform.second.transpose() * H * normalizationTransform.first;
 }
 
 Eigen::MatrixXd DLT::denormalizeUsingTranspose(const Eigen::Matrix3d& H, const std::pair<Eigen::Matrix3d, Eigen::Matrix3d>& normalizationTransform)
@@ -215,11 +214,7 @@ std::pair<Eigen::Matrix3d, Eigen::Matrix3d> DLT::normalizePoints(const std::vect
 		//std::cout << std::fixed << p1.transpose() << "\t\t" << p2.transpose() << std::endl;
 	}
 
-	std::cout << std::endl;
-
-
 	//std::cout << "[Info]  Average Distance: " << sum_dist.first / in_points.size() << " , " << sum_dist.second / in_points.size() << std::endl;
-
 
 	//std::cout << "[Info]  T1: " << std::endl << T.first << std::endl << std::endl;
 	//std::cout << "[Info]  T2: " << std::endl << T.second << std::endl << std::endl;

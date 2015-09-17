@@ -96,21 +96,23 @@ Eigen::MatrixXd Reconstruction3D::computeF(const std::vector<std::pair<Eigen::Ve
 
 
 
-Eigen::MatrixXd Reconstruction3D::computeE(const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K, const Eigen::MatrixXd& F)
+Eigen::MatrixXd Reconstruction3D::computeE(const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K, const Eigen::MatrixXd& F, bool applyConstraint)
 {
 	Eigen::MatrixXd E = K.second.transpose() * F * K.first;
 	//E /= E(2, 2);	// o erro aumenta
-	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
-	Eigen::VectorXd singularValues = svd.singularValues();
-	Eigen::DiagonalMatrix< double, 3, 3 > diagonal(1, 1, 0);
-	Eigen::MatrixXd D = diagonal.toDenseMatrix();
-	Eigen::MatrixXd constrainedMat = svd.matrixU() * D * svd.matrixV().transpose();
-	E = constrainedMat;
-
+	
+	if (applyConstraint)
+	{
+		Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner> svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
+		Eigen::VectorXd singularValues = svd.singularValues();
+		Eigen::DiagonalMatrix< double, 3, 3 > diagonal(1, 1, 0);
+		Eigen::MatrixXd D = diagonal.toDenseMatrix();
+		Eigen::MatrixXd constrainedMat = svd.matrixU() * D * svd.matrixV().transpose();
+		E = constrainedMat;
+	}
 	//std::cout << std::fixed
 	//	<< "E In  determinant : " << F.determinant() << std::endl
 	//	<< "E Out determinant : " << constrainedMat.determinant() << std::endl << std::endl;
-
 	
 	return E;
 }
@@ -466,10 +468,7 @@ double Reconstruction3D::pointLineDistance(Eigen::Vector2d point, Eigen::Vector3
 	const double b = line[1];
 	const double c = line[2];
 
-	const double num = std::abs(a * x + b * y + c);
-	const double den = std::sqrt(a * a + b * b);
-
-	return num / den;
+	return std::abs(a * x + b * y + c) / std::sqrt(a * a + b * b);
 }
 
 
@@ -493,12 +492,47 @@ double Reconstruction3D::computeError(const std::vector<std::pair<Eigen::Vector2
 		//	<< std::fixed
 		//	<< x0.transpose() << '\t' << x1.transpose() << std::endl
 		//	<< l0.transpose() << '\t' << l1.transpose() << std::endl
-		//	<< "distance: " << d << '\t' << d0 << '\t' << d1 << std::endl << std::endl;
+		//	<< "distance: [" << d0 << ", " << d1 << "] -> " << d << std::endl << std::endl;
 
 		error += d;
 	}
 
 	return error;
+}
+
+int Reconstruction3D::computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& F, double threshold, double& error)
+{
+	int inliers = 0;
+	error = 0;
+
+
+
+	for (const auto x : pts)
+	{
+		Eigen::Vector3d x0 = x.first.homogeneous();
+		Eigen::Vector3d x1 = x.second.homogeneous();
+
+		Eigen::Vector3d l0 = F.transpose() * x1;
+		Eigen::Vector3d l1 = F * x0;
+
+		double d0 = pointLineDistance(x.first, l0);
+		double d1 = pointLineDistance(x.second, l1);
+		double d = d0 * d0 + d1 * d1;
+
+		if (d < threshold)
+			++inliers;
+
+
+		//std::cout
+		//	<< std::fixed
+		//	<< x0.transpose() << '\t' << x1.transpose() << std::endl
+		//	<< l0.transpose() << '\t' << l1.transpose() << std::endl
+		//	<< "distance: [" << d0 << ", " << d1 << "] -> " << d << std::endl << std::endl;
+		std::cout << "Distance: " << d << std::endl;
+		error += d;
+	}
+
+	return inliers;
 }
 
 #if 0
@@ -632,33 +666,35 @@ void Reconstruction3D::QRdecomposition(Eigen::MatrixXd A, Eigen::Matrix3d &R, Ei
 
 ReconstructionDLT Reconstruction3D::solve(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
 											const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K, 
+											double threshold,
 											int maxIterations)
 {
-	std::pair<Eigen::MatrixXd, Eigen::MatrixXd>	P(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
-
 	std::vector<ReconstructionDLT> dltArray;
 
 	for (int it = 0; it < maxIterations; ++it)
 	{
-		std::vector<int> indices = RansacDLT::random4Indices(0, (int)pts.size() - 1);
+		std::vector<int> indices = RansacDLT::randomIndices(8, 0, (int)pts.size() - 1);
 
-		// copy points from original array to the 4-array to be used for reconstruction
+		// copy points from original array to the 8-array to be used for reconstruction
 		std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points2D;
 		for each (auto i in indices)
 			points2D.push_back(pts[i]);
 
 
-		dltArray.push_back(ReconstructionDLT(points2D, K));
+		dltArray.push_back(ReconstructionDLT(points2D));
 		ReconstructionDLT& dlt = dltArray.back();
 
-		dlt.solve();
-
-		std::cout << it << " : " << dlt.error << " , " << dlt.inliersCount << std::endl;
+		Eigen::MatrixXd F = dlt.solve();
+	
+		dlt.inliersCount = Reconstruction3D::computeInliers(pts, F, threshold, dlt.error);
+		//std::cout << std::fixed << it << " : " << dlt.error << " , " << dlt.inliersCount << std::endl;
 	}
 
 
 	std::sort(dltArray.begin(), dltArray.end());
 
+	//for (auto dlt : dltArray)
+	//	std::cout << std::fixed << dlt.inliersCount << " , " << dlt.error << std::endl;
 
 	return dltArray.front();
 }
@@ -668,18 +704,15 @@ ReconstructionDLT Reconstruction3D::solve(	const std::vector<std::pair<Eigen::Ve
 
 
 ReconstructionDLT::ReconstructionDLT(
-		const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
-		const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& _K):
+		const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts):
 		points2D(pts),
-		K(_K), 
 		inliersCount(0)
 {
 
 }
 
-void ReconstructionDLT::solve(double outlierThreshold)
+Eigen::MatrixXd ReconstructionDLT::solve()
 {
-	P = std::make_pair(Eigen::MatrixXd(3, 4), Eigen::MatrixXd(3, 4));
 
 	//
 	// Normalize points
@@ -690,62 +723,18 @@ void ReconstructionDLT::solve(double outlierThreshold)
 	// Compute F matrix
 	//
 	Eigen::MatrixXd Fn = Reconstruction3D::computeF(points2DNorm);
-	Fn = Reconstruction3D::applyConstraint(Fn);
-	Eigen::MatrixXd F = DLT::denormalizeUsingTranspose(Fn, T);
 
+
+	Fn = Reconstruction3D::applyConstraint(Fn);
+	F = DLT::denormalizeUsingTranspose(Fn, T);
+
+	
 	//
 	// Compute E matrix
 	//
-	Eigen::MatrixXd E = Reconstruction3D::computeE(K, F);
+	//Eigen::MatrixXd E = Reconstruction3D::computeE(K, F);
 
-	//std::vector<Eigen::MatrixXd> P_solutions;
-	//Reconstruction3D::computeP(points2DNorm, E, P_solutions);
-
-	P.first = Eigen::MatrixXd::Identity(3, 4);
-	//P.first.block(0, 0, 3, 3) = K.first;
-
-	//Eigen::MatrixXd P2 = Reconstruction3D::selectBestP(points2D, K, P_solutions);
-	Eigen::MatrixXd P2 = Reconstruction3D::computeP(points2DNorm, E);
-	//P.second = K.second * P2;
-	P.second = P2;
-
-	//error = Reconstruction3D::computeGeometricError(points2DNorm, P);
-	//std::cout << "Geometric Error: " << Reconstruction3D::computeGeometricError(points2DNorm, P) << std::endl;
-
-	inliersCount = 0;
-	error = 0;
-	for (const auto x : points2DNorm)
-	{
-		Eigen::Vector3d x0 = x.first.homogeneous();
-		Eigen::Vector3d x1 = x.second.homogeneous();
-
-		Eigen::VectorXd X = Triangulation::solve(P, x);
-
-		Eigen::Vector3d xx0 = P.first * X;
-		Eigen::Vector3d xx1 = P.second * X;
-
-		xx0 /= xx0[2];
-		xx1 /= xx1[2];
-
-		double d0 = Eigen::Vector3d(x0 - xx0).norm();
-		double d1 = Eigen::Vector3d(x1 - xx1).norm();
-
-		//std::cout << std::fixed << "x0, x1   : " << x0.transpose() << '\t' << x1.transpose() << std::endl;
-		//std::cout << std::fixed << "xx0, xx1 : " << xx0.transpose() << '\t' << xx1.transpose() << std::endl;
-		//std::cout << "d0, d1 : " << d0 << ", " << d1 << std::endl;
-
-		//error += d0 * d0 + d1 * d1;
-		double localError = d0 + d1;
-
-		if (localError < outlierThreshold)
-			++inliersCount;
-
-		error += localError;
-	}
-	//std::cout << "Sum Error: " << error << std::endl << std::endl;
-
-	P.first.block(0, 0, 3, 3) = K.first;
-	P.second = K.second * P2;
+	return F;
 }
 
 
@@ -753,5 +742,6 @@ bool ReconstructionDLT::operator < (ReconstructionDLT const &other)
 {
 	//	return (this->inliers > other.inliers) && (this->error.first + this->error.second) < (other.error.first + other.error.second);
 	//	return (this->error.first + this->error.second) < (other.error.first + other.error.second);
-	return (this->inliersCount) > (other.inliersCount) && (this->error) < (other.error);
+	//return (this->inliersCount) > (other.inliersCount) && (this->error) < (other.error);
+	return (this->inliersCount) > (other.inliersCount);
 }

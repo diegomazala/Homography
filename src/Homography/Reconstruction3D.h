@@ -8,17 +8,16 @@
 
 struct ReconstructionDLT
 {
-	ReconstructionDLT(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
-		const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& _K);
+	ReconstructionDLT(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts);
 
-	void solve(double outlierThreshold = 30.0);
+	Eigen::MatrixXd solve();
 
 	bool operator < (ReconstructionDLT const &other);
 
 	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points2D;
 	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points2DNorm;
-	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> K;
-	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> P;
+
+	Eigen::MatrixXd F;
 	double error;
 	int inliersCount;
 };
@@ -31,7 +30,8 @@ public:
 	static ReconstructionDLT solve(
 								const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
 								const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K,
-								int maxIterations = 500);
+								double threshold,
+								int maxIterations = 10);
 
 	
 	static Eigen::MatrixXd buildMatrixA(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts);
@@ -40,7 +40,7 @@ public:
 
 	static Eigen::MatrixXd computeF(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts);
 
-	static Eigen::MatrixXd computeE(const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K, const Eigen::MatrixXd& F);
+	static Eigen::MatrixXd computeE(const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K, const Eigen::MatrixXd& F, bool applyConstraint = true);
 
 	static Eigen::MatrixXd computeK(const Eigen::MatrixXd& F);
 		
@@ -68,6 +68,7 @@ public:
 	static double pointLineDistance(Eigen::Vector2d point, Eigen::Vector3d line);
 
 	static double computeError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& F);
+	static int computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& F, double threshold, double& err);
 	//static double computeGeometricError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& P, double outlierThreshold, int& inliers);
 
 	static void solveCS(float &c, float &s, float a, float b);

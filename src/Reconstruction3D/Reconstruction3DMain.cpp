@@ -21,6 +21,7 @@ std::vector<Eigen::Vector3d>								Points3D;
 std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>	Points2D;
 std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>	Points2DNorm;
 std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>	Points2DAll;
+std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>	Points2DSurf;
 
 
 void setupMatrices()
@@ -197,9 +198,7 @@ void exportPSolutions(const std::vector<Eigen::MatrixXd>& P_solutions, const std
 	}
 }
 
-
-
-int main(int argc, char* argv[])
+void test8Points()
 {
 	setupMatrices();
 	thaiLionPointCorrespondence();
@@ -216,24 +215,45 @@ int main(int argc, char* argv[])
 	//project3DPointsFile("../../data/thai-lion/thai-lion.obj", "../../data/thai-lion-proj-2.obj", P.second);
 	//return 0;
 
+	double threshold = 50;
+	ReconstructionDLT dlt (Points2D);
+	dlt.solve();
+	dlt.inliersCount = Reconstruction3D::computeInliers(Points2D, dlt.F, threshold, dlt.error);
+	std::cout << "Inliers: " << dlt.inliersCount << " --> " << dlt.error << std::endl;
+	
+	Eigen::MatrixXd E = Reconstruction3D::computeE(K, dlt.F);
 
 
-	ReconstructionDLT dlt = Reconstruction3D::solve(Points2DAll, K);
+	///////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Compute P matrix
+	//
+	P.first = Eigen::MatrixXd::Identity(3, 4);
+	P.first.block(0, 0, 3, 3) = K.first;
+	//
+	
+	
+	P.second = K.second * Reconstruction3D::computeP(Points2D, E);
 
-	std::cout << "Inliers: " << dlt.inliersCount << std::endl;
-
-	std::string obj_file_name = "../../data/ThaiLion_RANSAC.obj";
+	std::string obj_file_name = "../../data/ThaiLion_DLT_test8pts.obj";
 	std::cout
 		<< std::endl << std::endl
-		<< "[Info]  Exporting : " << obj_file_name << " ..." << std::endl << std::endl;
-	//<< P.second << std::endl;
-	//exportObj(obj_file_name, Points2D, P);
-	//exportObj(obj_file_name, Points2DAll, P);
-	exportObj(obj_file_name, Points2DAll, dlt.P);
+		<< "[Info]  Exporting : " << obj_file_name << std::endl << std::endl;
 
-	return 0;
+	exportObj(obj_file_name, Points2DAll, P);
+}
 
-#if 0
+
+
+
+int main(int argc, char* argv[])
+{
+	//test8Points();
+	//return 0;
+
+	setupMatrices();
+
+
 	std::vector<std::string> imageFiles;
 	std::string pointsFile;
 
@@ -252,82 +272,76 @@ int main(int argc, char* argv[])
 	//
 	// Reading points from file
 	//
-	if (!Points::readFromFile(pointsFile, Points2D))
+	if (!Points::readFromFile("../../data/ThaiLion-35991-pts.txt", Points2DAll))
+	{
+		std::cout << "[Error] Could not read points from file: ../../data/ThaiLion-35991-pts.txt" << std::endl;
+		return EXIT_FAILURE;
+	}
+	else
+	{
+		std::cout << "[Info]  Count of points loaded from file = " << Points2DSurf.size() << std::endl;
+	}
+
+
+
+	//
+	// Reading points from file
+	//
+	if (!Points::readFromFile(pointsFile, Points2DSurf))
 	{
 		std::cout << "[Error] Could not read points from file: " << pointsFile << std::endl;
 		return EXIT_FAILURE;
 	}
 	else
 	{
-		std::cout << "[Info]  Count of points loaded from file = " << Points2D.size() << std::endl;
+		std::cout << "[Info]  Count of points loaded from file = " << Points2DSurf.size() << std::endl;
 	}
-#endif
+	
 
+	ReconstructionDLT dlt = Reconstruction3D::solve(Points2DSurf, K, 100, 500);
 
-	//
-	// Normalize points
-	// 
+	std::cout << "Inliers: " << dlt.inliersCount << " --> " << dlt.error << std::endl;
 
-	std::pair<Eigen::Matrix3d, Eigen::Matrix3d> T = DLT::normalizePoints(Points2D, Points2DNorm);
-
-
-	///////////////////////////////////////////////////////////////////////////////////////
-	//
-	// Compute F matrix
-	//
-	Eigen::MatrixXd Fn = Reconstruction3D::computeF(Points2DNorm);
-	//Eigen::MatrixXd Fn = Reconstruction3D::computeF(Points2D);
-
-	//std::cout << "Error Points2D     x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
-	//std::cout << "Error Points2DNorm x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, Fn) << std::endl;
-
-	//std::cout
-	//	<< std::endl << std::fixed
-	//	<< "F normalized: " << std::endl
-	//	<< Fn << std::endl << std::endl;
-
-	Fn = Reconstruction3D::applyConstraint(Fn);
-
-	//std::cout << "Error Points2D     F_Constrained x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, Fn) << std::endl;
-	//std::cout << "Error Points2DNorm F_Constrained x'Fnx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, Fn) << std::endl;
-
-	// 
-	// Denormalize F matrix
-	//
-	Eigen::MatrixXd F = DLT::denormalizeUsingTranspose(Fn, T);
-	//Eigen::MatrixXd F = Fn;
-
-
-	//std::cout
-	//	<< std::endl << std::fixed
-	//	<< "F constrained and denormalized: " << std::endl
-	//	<< F << std::endl << std::endl;
-
-	//std::cout << "Error Points2D     x'Fx=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, F) << std::endl;
-	//std::cout << "Error Points2DNorm x'Fx=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, F) << std::endl;
-
-
-
-	//F /= F(2, 2);	// o erro aumenta
-	//std::cout
-	//	<< std::endl << std::fixed
-	//	<< "F constrained, denormalized and divided by F(2,2): " << std::endl
-	//	<< F << std::endl << std::endl;
+	Eigen::MatrixXd E = Reconstruction3D::computeE(K, dlt.F);
 	//
 	/////////////////////////////////////////////////////////////////////////////////////// 
 
 
-	Eigen::MatrixXd E = Reconstruction3D::computeE(K, F);
-	//std::cout
-	//	<< std::endl << std::fixed
-	//	<< "E: " << std::endl
-	//	<< E << std::endl << std::endl;
-
+	
+	
 	//std::cout << "Error Points2D     x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, E) << std::endl;
 	//std::cout << "Error Points2DNorm x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, E) << std::endl;
 
 
-#if 0
+#if 1
+
+	///////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Compute P matrix
+	//
+	P.first = Eigen::MatrixXd::Identity(3, 4);
+	P.first.block(0, 0, 3, 3) = K.first;
+	//
+	std::vector<Eigen::MatrixXd> P_solutions;
+	Reconstruction3D::computeP(dlt.points2D, E, P_solutions);
+
+	//exportPSolutions(P_solutions, Points2DAll);
+
+	double outlierThreshold = 20.0;
+	int i = 0;
+	for (auto m : P_solutions)
+	{
+		++i;
+		P.second = K.second * m;
+
+		std::string obj_file_name = "../../data/ThaiLion_Ransac_" + std::to_string(i) + ".obj";
+		std::cout
+			<< std::endl << std::endl
+			<< "[Info]  Exporting : " << obj_file_name << std::endl << std::endl;
+		
+		exportObj(obj_file_name, Points2DAll, P);
+	}
+#else
 	///////////////////////////////////////////////////////////////////////////////////////
 	//
 	// Compute P matrix
