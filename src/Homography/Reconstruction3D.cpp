@@ -7,12 +7,12 @@
 
 
 
-Eigen::MatrixXd Reconstruction3D::buildMatrixA(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts)
+Eigen::MatrixXd Reconstruction3D::buildMatrixA(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points)
 {
 	int i = 0;
-	Eigen::MatrixXd A(pts.size(), 9);		// 8 x 9, 2n x 9
+	Eigen::MatrixXd A(points.size(), 9);		// 8 x 9, 2n x 9
 
-	for (const auto p : pts)
+	for (const auto p : points)
 	{
 		A(i, 0) = p.second.x() * p.first.x();
 		A(i, 1) = p.second.x() * p.first.y();
@@ -66,9 +66,9 @@ Eigen::MatrixXd Reconstruction3D::applyConstraint(const Eigen::MatrixXd& inputMa
 }
 
 
-Eigen::MatrixXd Reconstruction3D::computeF(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts)
+Eigen::MatrixXd Reconstruction3D::computeF(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points)
 {
-	Eigen::MatrixXd A = Reconstruction3D::buildMatrixA(pts);
+	Eigen::MatrixXd A = Reconstruction3D::buildMatrixA(points);
 
 	//std::cout << std::fixed << "F A:" << std::endl << A << std::endl << std::endl;
 
@@ -214,7 +214,7 @@ Eigen::MatrixXd Reconstruction3D::computeP(const Eigen::MatrixXd& F, const Eigen
 }
 
 
-Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points,
 											const Eigen::MatrixXd& E)
 {
 	Eigen::JacobiSVD< Eigen::MatrixXd, Eigen::FullPivHouseholderQRPreconditioner > svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
@@ -247,7 +247,7 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 
 	Eigen::MatrixXd bestP1 = P0;
 	int numCorrectSolutions = 0;
-	if (checkP(pts, P0, P1))
+	if (checkP(points, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
@@ -255,7 +255,7 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 
 	P1.block(0, 3, 3, 1) = -u3;
 
-	if (checkP(pts, P0, P1))
+	if (checkP(points, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
@@ -265,7 +265,7 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 	P1.block(0, 0, 3, 3) = UWVt;
 	P1.block(0, 3, 3, 1) = u3;
 
-	if (checkP(pts, P0, P1))
+	if (checkP(points, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
@@ -274,7 +274,7 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 	P1.block(0, 3, 3, 1) = -u3;
 
 
-	if (checkP(pts, P0, P1))
+	if (checkP(points, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
@@ -294,11 +294,11 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 }
 
 
-bool Reconstruction3D::checkP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+bool Reconstruction3D::checkP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points,
 	const Eigen::MatrixXd& P0,
 	const Eigen::MatrixXd& P1)
 {
-	Eigen::VectorXd X = Triangulation::solve(std::make_pair(P0, P1), pts[0]);
+	Eigen::VectorXd X = Triangulation::solve(std::make_pair(P0, P1), points[0]);
 
 	Eigen::VectorXd x0 = P0 * X;
 	Eigen::VectorXd x1 = P1 * X;
@@ -310,8 +310,8 @@ bool Reconstruction3D::checkP(const std::vector<std::pair<Eigen::Vector2d, Eigen
 	//std::cout << "========== P1 Check =============: " << std::endl
 	//	<< "P0:" << std::endl << P0 << std::endl << std::endl
 	//	<< "P1:" << std::endl << P1 << std::endl << std::endl
-	//	<< "x: " << std::endl << pts[0].first.transpose() << std::endl << std::endl
-	//	<< "x': " << std::endl << pts[0].second.transpose() << std::endl << std::endl
+	//	<< "x: " << std::endl << points[0].first.transpose() << std::endl << std::endl
+	//	<< "x': " << std::endl << points[0].second.transpose() << std::endl << std::endl
 	//	<< "3d point: " << std::endl << X.transpose() << std::endl << std::endl
 	//	<< "Reprojected x: " << std::endl << x0.transpose() << std::endl << std::endl
 	//	<< "Reprojected x': " << std::endl << x1.transpose() << std::endl << std::endl
@@ -320,7 +320,7 @@ bool Reconstruction3D::checkP(const std::vector<std::pair<Eigen::Vector2d, Eigen
 	return (x0.z() > 0.0) && (x1.z() > 0.0);
 }
 
-void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points,
 								const Eigen::MatrixXd& E, 
 								std::vector<Eigen::MatrixXd>& P_solutions)
 {
@@ -356,7 +356,7 @@ void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eig
 
 	Eigen::MatrixXd bestP1;
 	int numCorrectSolutions = 0;
-	if (checkP(pts, P0, P1))
+	if (checkP(points, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
@@ -367,7 +367,7 @@ void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eig
 
 	P1.block(0, 3, 3, 1) = -u3;
 
-	if (checkP(pts, P0, P1))
+	if (checkP(points, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
@@ -380,7 +380,7 @@ void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eig
 	P1.block(0, 3, 3, 1) = u3;
 
 
-	if (checkP(pts, P0, P1))
+	if (checkP(points, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
@@ -391,7 +391,7 @@ void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eig
 	P1.block(0, 3, 3, 1) = -u3;
 
 
-	if (checkP(pts, P0, P1))
+	if (checkP(points, P0, P1))
 	{
 		++numCorrectSolutions;
 		bestP1 = P1;
@@ -474,11 +474,11 @@ double Reconstruction3D::pointLineDistance(Eigen::Vector2d point, Eigen::Vector3
 }
 
 
-double Reconstruction3D::computeError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& F)
+double Reconstruction3D::computeError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points, const Eigen::MatrixXd& F)
 {
 	double error = 0;
 
-	for (const auto x : pts)
+	for (const auto x : points)
 	{
 		Eigen::Vector3d x0 = x.first.homogeneous();
 		Eigen::Vector3d x1 = x.second.homogeneous();
@@ -503,12 +503,12 @@ double Reconstruction3D::computeError(const std::vector<std::pair<Eigen::Vector2
 	return error;
 }
 
-int Reconstruction3D::computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const Eigen::MatrixXd& F, double threshold, double& error)
+int Reconstruction3D::computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points, const Eigen::MatrixXd& F, double threshold, double& error)
 {
 	int inliers = 0;
 	error = 0;
 
-	for (const auto x : pts)
+	for (const auto x : points)
 	{
 		Eigen::Vector3d x0 = x.first.homogeneous();
 		Eigen::Vector3d x1 = x.second.homogeneous();
@@ -546,12 +546,12 @@ int Reconstruction3D::computeInliers(const std::vector<std::pair<Eigen::Vector2d
 }
 
 #if 0
-double Reconstruction3D::computeGeometricError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts, const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& P, double outlierThreshold, int& inliers)
+double Reconstruction3D::computeGeometricError(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points, const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& P, double outlierThreshold, int& inliers)
 {
 	double error = 0;
 	inliers = 0;
 	
-	for (const auto x : pts)
+	for (const auto x : points)
 	{
 		Eigen::Vector3d x0 = x.first.homogeneous();
 		Eigen::Vector3d x1 = x.second.homogeneous();
@@ -674,37 +674,59 @@ void Reconstruction3D::QRdecomposition(Eigen::MatrixXd A, Eigen::Matrix3d &R, Ei
 
 
 
-ReconstructionDLT Reconstruction3D::solve(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
+ReconstructionDLT Reconstruction3D::solve(	const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points,
 											const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K, 
 											double threshold,
 											int maxIterations)
 {
+	double s = 4.0;
+	double p = 0.99;
+	double N = (double)points.size();
+	double T = 0.0;
+	double E = (double)points.size();
+	
 	std::vector<ReconstructionDLT> dltArray;
+	int inliersPercentageAchieved = 0;
+	int inliersPercentageAccepted = 99;
 
-	for (int it = 0; it < maxIterations; ++it)
+	//
+	// Run the iteration to find the best DLT, i.e, with the biggest number of inliers
+	//
+	int it = 0;
+	while (it < N && it++ < maxIterations)
 	{
-		std::vector<int> indices = RansacDLT::randomIndices(8, 0, (int)pts.size() - 1);
-
 		// copy points from original array to the 8-array to be used for reconstruction
+		std::vector<int> indices = RansacDLT::randomIndices(8, 0, (int)points.size() - 1);
 		std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points2D;
-		for (auto i : indices)
-			points2D.push_back(pts[i]);
+		for (auto ind : indices)
+			points2D.push_back(points[ind]);
+
 
 		dltArray.push_back(ReconstructionDLT(points2D));
 		ReconstructionDLT& dlt = dltArray.back();
 
 		Eigen::MatrixXd F = dlt.solve();
-	
-		dlt.inliersCount = Reconstruction3D::computeInliers(pts, F, threshold, dlt.error);
-		//std::cout << std::fixed << it << " : " << dlt.error << " , " << dlt.inliersCount << std::endl;
+		int inliers = dlt.inliersCount = Reconstruction3D::computeInliers(points, F, threshold, dlt.error);
+
+		// Compute error for this iteration and update the global error 
+		double Ei = 1.0 - (double(inliers) / double(points.size()));
+		if (Ei < E)
+			E = Ei;
+
+		N = std::log(1.0 - p) / std::log(1.0 - std::pow(1.0 - E, s));
+
+		T = (1.0 - E) * points.size();
+
+		inliersPercentageAchieved = (int)(double(inliers) / double(points.size()) * 100);
+
+		std::cout
+			<< std::fixed
+			<< "[Info]  Inliers Achieved  : " << inliersPercentageAchieved << "%  ==> " << inliers << " of " << points.size() << std::endl
+			<< "[Info]  E, N, T           : " << E << ", " << N << ", " << T << std::endl << std::endl;
 	}
 
-
 	std::sort(dltArray.begin(), dltArray.end());
-
-	//for (auto dlt : dltArray)
-	//	std::cout << std::fixed << dlt.inliersCount << " , " << dlt.error << std::endl;
-
+	std::cout << "Iterations: " << it << std::endl;
 	return dltArray.front();
 }
 
@@ -713,8 +735,8 @@ ReconstructionDLT Reconstruction3D::solve(	const std::vector<std::pair<Eigen::Ve
 
 
 ReconstructionDLT::ReconstructionDLT(
-		const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts):
-		points2D(pts),
+		const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points):
+		points2D(points),
 		inliersCount(0)
 {
 
@@ -751,7 +773,15 @@ bool ReconstructionDLT::operator < (ReconstructionDLT const &other)
 {
 	//	return (this->inliers > other.inliers) && (this->error.first + this->error.second) < (other.error.first + other.error.second);
 	//	return (this->error.first + this->error.second) < (other.error.first + other.error.second);
-	//return (this->inliersCount) > (other.inliersCount) && (this->error) < (other.error);
-	return (this->inliersCount) > (other.inliersCount);
+	//return (this->inliersCount) >= (other.inliersCount) && (this->error) < (other.error);
+	//return (this->inliersCount) > (other.inliersCount);
 	//return (this->error) < (other.error);
+
+	if (this->inliersCount > other.inliersCount)
+		return true;
+	
+	if (this->inliersCount == other.inliersCount)
+		return this->error < other.error;
+
+	return false;
 }

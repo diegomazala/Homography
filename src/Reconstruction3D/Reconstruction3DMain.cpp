@@ -299,8 +299,8 @@ void testRansac()
 int main(int argc, char* argv[])
 {
 	//test8Points();
-	testRansac();
-	return 0;
+	//testRansac();
+	//return 0;
 
 	setupMatrices();
 
@@ -349,32 +349,16 @@ int main(int argc, char* argv[])
 	}
 	
 
-	//ReconstructionDLT dlt = Reconstruction3D::solve(Points2DSurf, K, 30, 5);
-	//std::cout << "Inliers: " << dlt.inliersCount << " --> " << dlt.error << std::endl;
-
 	double threshold = 50;
-	ReconstructionDLT dlt(Points2DSurf);
-	dlt.solve();
-	dlt.inliersCount = Reconstruction3D::computeInliers(Points2DSurf, dlt.F, threshold, dlt.error);
+	if (argc > 2)
+		threshold = atoi(argv[2]);
+
+	ReconstructionDLT dlt = Reconstruction3D::solve(Points2DSurf, K, threshold, 1000);
 	std::cout << "Inliers: " << dlt.inliersCount << " --> " << dlt.error << std::endl;
 
 	Eigen::MatrixXd E = Reconstruction3D::computeE(K, dlt.F);
-	//
-	/////////////////////////////////////////////////////////////////////////////////////// 
-
-
-	for (auto x : Points2DSurf)
-	{
-		std::cout << x.first.transpose() << "   " << x.second.transpose() << std::endl;
-	}
-
-	
-	//std::cout << "Error Points2D     x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, E) << std::endl;
-	//std::cout << "Error Points2DNorm x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, E) << std::endl;
-
 
 #if 1
-
 	///////////////////////////////////////////////////////////////////////////////////////
 	//
 	// Compute P matrix
@@ -384,8 +368,6 @@ int main(int argc, char* argv[])
 	//
 	std::vector<Eigen::MatrixXd> P_solutions;
 	Reconstruction3D::computeP(Points2DSurf, E, P_solutions);
-
-	//exportPSolutions(P_solutions, Points2DAll);
 
 	double outlierThreshold = 20.0;
 	int i = 0;
@@ -398,9 +380,11 @@ int main(int argc, char* argv[])
 		std::cout
 			<< std::endl << std::endl
 			<< "[Info]  Exporting : " << obj_file_name << std::endl << std::endl;
-		
+
 		exportObj(obj_file_name, Points2DAll, P);
+		//exportObj(obj_file_name, Points2DSurf, P);
 	}
+
 #else
 	///////////////////////////////////////////////////////////////////////////////////////
 	//
