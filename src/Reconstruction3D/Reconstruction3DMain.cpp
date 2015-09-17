@@ -119,15 +119,6 @@ void setupMatrices()
 
 void thaiLionPointCorrespondence()
 {
-	//		1600  955   1528  916
-	//		2164  960   2001  969
-	//		1924 1224   1620 1204
-	//		1912 1573   1635 1551
-	//		2235 1675   1929 1701
-	//		1623 1993   1378 1932
-	//		1845 2203   1570 2176
-	//		2184 2193   1867 2220
-
 	Points2D.clear();
 
 	Points2D.push_back(std::make_pair(Eigen::Vector2d(1600, 955), Eigen::Vector2d(1528, 916)));
@@ -171,7 +162,12 @@ void exportPointCorrespondence(const std::string& filename, const std::vector<st
 	outFile << "POINT_COUNT: " << points2D.size() << std::endl;
 
 	for (auto p : points2D)
-		outFile << std::fixed << '[' << p.first.transpose() << "]\t[" << p.second.transpose() << ']' << std::endl;
+		//outFile << std::fixed << '[' << p.first.transpose() << "]\t[" << p.second.transpose() << ']' << std::endl;
+		outFile 
+		<< std::fixed 
+		<< '[' << p.first.x() << ", " << p.first.y()
+		<< "]\t[" << p.second.x() << ", " << p.second.y() 
+		<< ']' << std::endl;
 
 	outFile.close();
 }
@@ -208,12 +204,6 @@ void test8Points()
 
 	readPointsFromObj("../../data/thai-lion.obj", Points3D, 36000);
 	buildCorrespondenceFrom3DPoints(Points3D, P, Points2DAll);
-	//exportPointCorrespondence("../../data/ThaiLion-pts.txt", Points2DAll);
-	//exportObj("../../data/thai-lion-proj2D-1.obj", "../../data/thai-lion-proj2D-2.obj", Points2DAll);
-
-	//project3DPointsFile("../../data/thai-lion/thai-lion.obj", "../../data/thai-lion-proj-1.obj", P.first);
-	//project3DPointsFile("../../data/thai-lion/thai-lion.obj", "../../data/thai-lion-proj-2.obj", P.second);
-	//return 0;
 
 	double threshold = 50;
 	ReconstructionDLT dlt (Points2D);
@@ -243,13 +233,80 @@ void test8Points()
 	exportObj(obj_file_name, Points2DAll, P);
 }
 
+void testRansac()
+{
+	setupMatrices();
+	thaiLionPointCorrespondence();
+	
+	
+	//Points2DSurf = Points2D;
+	//
+	// Reading points from file
+	//
+	std::string pointsFile = "../../data/ThaiLion-35991-pts.txt";
+	if (!Points::readFromFile(pointsFile, Points2DSurf))
+	{
+		std::cout << "[Error] Could not read points from file: " << pointsFile << std::endl;
+		return;
+	}
+	else
+	{
+		std::cout << "[Info]  Count of points loaded from file = " << Points2DSurf.size() << std::endl;
+	}
 
+	P.first = K.first * Rt.first;
+	P.second = K.second * Rt.second;
+
+	readPointsFromObj("../../data/thai-lion.obj", Points3D, 36000);
+	buildCorrespondenceFrom3DPoints(Points3D, P, Points2DAll);
+
+	//exportPointCorrespondence("../../data/ThaiLion_All-pts.txt", Points2DAll);
+	//exportPointCorrespondence("../../data/ThaiLion_AllSurf-pts.txt", Points2DSurf);
+	
+	//Points2DSurf = Points2DAll;
+
+	double threshold = 50;
+
+	ReconstructionDLT dlt = Reconstruction3D::solve(Points2DSurf, K, threshold, 500);
+
+	
+	std::cout << "Inliers: " << dlt.inliersCount << " --> " << dlt.error << std::endl;
+
+	Eigen::MatrixXd E = Reconstruction3D::computeE(K, dlt.F);
+
+	///////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Compute P matrix
+	//
+	P.first = Eigen::MatrixXd::Identity(3, 4);
+	P.first.block(0, 0, 3, 3) = K.first;
+	//
+	std::vector<Eigen::MatrixXd> P_solutions;
+	Reconstruction3D::computeP(Points2DSurf, E, P_solutions);
+
+	double outlierThreshold = 20.0;
+	int i = 0;
+	for (auto m : P_solutions)
+	{
+		++i;
+		P.second = K.second * m;
+
+		std::string obj_file_name = "../../data/ThaiLion_Ransac_" + std::to_string(i) + ".obj";
+		std::cout
+			<< std::endl << std::endl
+			<< "[Info]  Exporting : " << obj_file_name << std::endl << std::endl;
+
+		//exportObj(obj_file_name, Points2DAll, P);
+		exportObj(obj_file_name, Points2DSurf, P);
+	}
+}
 
 
 int main(int argc, char* argv[])
 {
 	//test8Points();
-	//return 0;
+	testRansac();
+	return 0;
 
 	setupMatrices();
 
@@ -279,7 +336,7 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
-		std::cout << "[Info]  Count of points loaded from file = " << Points2DSurf.size() << std::endl;
+		std::cout << "[Info]  Count of points loaded from file = " << Points2DAll.size() << std::endl;
 	}
 
 
@@ -298,8 +355,13 @@ int main(int argc, char* argv[])
 	}
 	
 
-	ReconstructionDLT dlt = Reconstruction3D::solve(Points2DSurf, K, 100, 500);
+	//ReconstructionDLT dlt = Reconstruction3D::solve(Points2DSurf, K, 30, 5);
+	//std::cout << "Inliers: " << dlt.inliersCount << " --> " << dlt.error << std::endl;
 
+	double threshold = 50;
+	ReconstructionDLT dlt(Points2DSurf);
+	dlt.solve();
+	dlt.inliersCount = Reconstruction3D::computeInliers(Points2DSurf, dlt.F, threshold, dlt.error);
 	std::cout << "Inliers: " << dlt.inliersCount << " --> " << dlt.error << std::endl;
 
 	Eigen::MatrixXd E = Reconstruction3D::computeE(K, dlt.F);
@@ -307,7 +369,11 @@ int main(int argc, char* argv[])
 	/////////////////////////////////////////////////////////////////////////////////////// 
 
 
-	
+	for (auto x : Points2DSurf)
+	{
+		std::cout << x.first.transpose() << "   " << x.second.transpose() << std::endl;
+	}
+
 	
 	//std::cout << "Error Points2D     x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2D, E) << std::endl;
 	//std::cout << "Error Points2DNorm x'Ex=0 : " << std::fixed << Reconstruction3D::computeError(Points2DNorm, E) << std::endl;
@@ -323,7 +389,7 @@ int main(int argc, char* argv[])
 	P.first.block(0, 0, 3, 3) = K.first;
 	//
 	std::vector<Eigen::MatrixXd> P_solutions;
-	Reconstruction3D::computeP(dlt.points2D, E, P_solutions);
+	Reconstruction3D::computeP(Points2DSurf, E, P_solutions);
 
 	//exportPSolutions(P_solutions, Points2DAll);
 

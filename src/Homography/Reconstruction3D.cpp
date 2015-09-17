@@ -239,10 +239,10 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 
 	Eigen::MatrixXd P0(Eigen::MatrixXd::Identity(3, 4)); // Just K0: no translation or rotation.
 
-	Eigen::MatrixXd P1noT = U * W * Vt; // P without translation part.
+	Eigen::MatrixXd UWVt = U * W * Vt; // P without translation part.
 
 	Eigen::MatrixXd P1(3, 4);
-	P1.block(0, 0, 3, 3) = P1noT;
+	P1.block(0, 0, 3, 3) = UWVt;
 	P1.block(0, 3, 3, 1) = u3;
 
 	Eigen::MatrixXd bestP1 = P0;
@@ -261,8 +261,8 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 		bestP1 = P1;
 	}
 
-	P1noT = U * W.transpose() * Vt;
-	P1.block(0, 0, 3, 3) = P1noT;
+	UWVt = U * W.transpose() * Vt;
+	P1.block(0, 0, 3, 3) = UWVt;
 	P1.block(0, 3, 3, 1) = u3;
 
 	if (checkP(pts, P0, P1))
@@ -290,6 +290,7 @@ Eigen::MatrixXd Reconstruction3D::computeP(	const std::vector<std::pair<Eigen::V
 //		std::cerr << "[Info]    : Solution found for P: \n" << bestP1 << std::endl << std::endl;
 
 	return bestP1;
+
 }
 
 
@@ -303,18 +304,18 @@ bool Reconstruction3D::checkP(const std::vector<std::pair<Eigen::Vector2d, Eigen
 	Eigen::VectorXd x1 = P1 * X;
 
 	//std::cout << std::fixed	<< "P' determinant : " << P1.block(0,0,3,3).determinant() << std::endl << std::endl;
+	//std::cout << std::fixed << "P' determinant : " << P1.determinant() << std::endl << std::endl;
 
 
 	//std::cout << "========== P1 Check =============: " << std::endl
 	//	<< "P0:" << std::endl << P0 << std::endl << std::endl
 	//	<< "P1:" << std::endl << P1 << std::endl << std::endl
-	//	<< "x: " << std::endl << p0.transpose() << std::endl << std::endl
-	//	<< "x': " << std::endl << p1.transpose() << std::endl << std::endl
+	//	<< "x: " << std::endl << pts[0].first.transpose() << std::endl << std::endl
+	//	<< "x': " << std::endl << pts[0].second.transpose() << std::endl << std::endl
 	//	<< "3d point: " << std::endl << X.transpose() << std::endl << std::endl
 	//	<< "Reprojected x: " << std::endl << x0.transpose() << std::endl << std::endl
 	//	<< "Reprojected x': " << std::endl << x1.transpose() << std::endl << std::endl
 	//	<< "========== P1 Check End =============: " << std::endl << std::endl;
-
 
 	return (x0.z() > 0.0) && (x1.z() > 0.0);
 }
@@ -334,7 +335,8 @@ void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eig
 	W << 0.0, -1.0, 0.0,
 		1.0, 0.0, 0.0,
 		0.0, 0.0, 1.0;
-
+	
+	
 	Eigen::VectorXd u3 = U.col(2);
 
 	//std::cout << "--- Computing P Matrix: " << std::endl
@@ -346,11 +348,10 @@ void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eig
 	//	<< "u3 :" << u3 << std::endl << std::endl;
 
 	Eigen::MatrixXd P0(Eigen::MatrixXd::Identity(3, 4)); // Just K0: no translation or rotation.
-
-	Eigen::MatrixXd P1noT = U * W * Vt; // P without translation part.
+	Eigen::MatrixXd UWVt = U * W * Vt; // P without translation part.
 
 	Eigen::MatrixXd P1(3, 4);
-	P1.block(0, 0, 3, 3) = P1noT;
+	P1.block(0, 0, 3, 3) = UWVt;
 	P1.block(0, 3, 3, 1) = u3;
 
 	Eigen::MatrixXd bestP1;
@@ -374,8 +375,8 @@ void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eig
 	}
 	P_solutions.push_back(P1);
 
-	P1noT = U * W.transpose() * Vt;
-	P1.block(0, 0, 3, 3) = P1noT;
+	UWVt = U * W.transpose() * Vt;
+	P1.block(0, 0, 3, 3) = UWVt;
 	P1.block(0, 3, 3, 1) = u3;
 
 
@@ -399,6 +400,7 @@ void Reconstruction3D::computeP(const std::vector<std::pair<Eigen::Vector2d, Eig
 	P_solutions.push_back(P1);
 
 	std::cout << "[Info]  Number of correct solutions: " << numCorrectSolutions << std::endl << std::endl;
+
 }
 
 
@@ -484,6 +486,7 @@ double Reconstruction3D::computeError(const std::vector<std::pair<Eigen::Vector2
 		Eigen::Vector3d l0 = F.transpose() * x1;
 		Eigen::Vector3d l1 = F * x0;
 
+
 		double d0 = pointLineDistance(x.first, l0);
 		double d1 = pointLineDistance(x.second, l1);
 		double d = d0 * d0 + d1 * d1;
@@ -505,8 +508,6 @@ int Reconstruction3D::computeInliers(const std::vector<std::pair<Eigen::Vector2d
 	int inliers = 0;
 	error = 0;
 
-
-
 	for (const auto x : pts)
 	{
 		Eigen::Vector3d x0 = x.first.homogeneous();
@@ -515,21 +516,30 @@ int Reconstruction3D::computeInliers(const std::vector<std::pair<Eigen::Vector2d
 		Eigen::Vector3d l0 = F.transpose() * x1;
 		Eigen::Vector3d l1 = F * x0;
 
+		double dd0 = l0.dot(x0);
+		double dd1 = l1.dot(x1);
+
+		l0 /= l0[2];
+		l1 /= l1[2];
 		double d0 = pointLineDistance(x.first, l0);
 		double d1 = pointLineDistance(x.second, l1);
+
 		double d = d0 * d0 + d1 * d1;
+		double dd = dd0 * dd0 + dd1 * dd1;
 
 		if (d < threshold)
 			++inliers;
 
 
 		//std::cout
-		//	<< std::fixed
-		//	<< x0.transpose() << '\t' << x1.transpose() << std::endl
-		//	<< l0.transpose() << '\t' << l1.transpose() << std::endl
-		//	<< "distance: [" << d0 << ", " << d1 << "] -> " << d << std::endl << std::endl;
-		std::cout << "Distance: " << d << std::endl;
-		error += d;
+			//<< std::fixed
+			//	<< x0.transpose() << '\t' << x1.transpose() << std::endl
+			//	<< l0.transpose() << '\t' << l1.transpose() << std::endl
+			//	<< "distance: [" << d0 << ", " << d1 << "] -> " << d << std::endl << std::endl;
+			//<< "d : [" << d0 << ", " << d1 << "] -> " << d << std::endl
+			//<< "dd: [" << dd0 << ", " << dd1 << "] -> " << dd << std::endl << std::endl;
+		
+		error += dd;
 	}
 
 	return inliers;
@@ -677,9 +687,8 @@ ReconstructionDLT Reconstruction3D::solve(	const std::vector<std::pair<Eigen::Ve
 
 		// copy points from original array to the 8-array to be used for reconstruction
 		std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points2D;
-		for each (auto i in indices)
+		for (auto i : indices)
 			points2D.push_back(pts[i]);
-
 
 		dltArray.push_back(ReconstructionDLT(points2D));
 		ReconstructionDLT& dlt = dltArray.back();
@@ -744,4 +753,5 @@ bool ReconstructionDLT::operator < (ReconstructionDLT const &other)
 	//	return (this->error.first + this->error.second) < (other.error.first + other.error.second);
 	//return (this->inliersCount) > (other.inliersCount) && (this->error) < (other.error);
 	return (this->inliersCount) > (other.inliersCount);
+	//return (this->error) < (other.error);
 }
