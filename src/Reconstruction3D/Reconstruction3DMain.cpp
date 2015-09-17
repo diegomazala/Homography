@@ -238,38 +238,32 @@ void testRansac()
 	setupMatrices();
 	thaiLionPointCorrespondence();
 	
-	
-	//Points2DSurf = Points2D;
 	//
 	// Reading points from file
 	//
-	std::string pointsFile = "../../data/ThaiLion-35991-pts.txt";
-	if (!Points::readFromFile(pointsFile, Points2DSurf))
-	{
-		std::cout << "[Error] Could not read points from file: " << pointsFile << std::endl;
-		return;
-	}
-	else
-	{
-		std::cout << "[Info]  Count of points loaded from file = " << Points2DSurf.size() << std::endl;
-	}
+	//std::string pointsFile = "../../data/ThaiLion-35991-pts.txt";
+	//if (!Points::readFromFile(pointsFile, Points2DSurf))
+	//{
+	//	std::cout << "[Error] Could not read points from file: " << pointsFile << std::endl;
+	//	return;
+	//}
+	//else
+	//{
+	//	std::cout << "[Info]  Count of points loaded from file = " << Points2DSurf.size() << std::endl;
+	//}
 
 	P.first = K.first * Rt.first;
 	P.second = K.second * Rt.second;
 
 	readPointsFromObj("../../data/thai-lion.obj", Points3D, 36000);
 	buildCorrespondenceFrom3DPoints(Points3D, P, Points2DAll);
-
-	//exportPointCorrespondence("../../data/ThaiLion_All-pts.txt", Points2DAll);
-	//exportPointCorrespondence("../../data/ThaiLion_AllSurf-pts.txt", Points2DSurf);
 	
-	//Points2DSurf = Points2DAll;
+	//Points2DSurf = Points2D;
+	Points2DSurf = Points2DAll;
 
 	double threshold = 50;
 
 	ReconstructionDLT dlt = Reconstruction3D::solve(Points2DSurf, K, threshold, 500);
-
-	
 	std::cout << "Inliers: " << dlt.inliersCount << " --> " << dlt.error << std::endl;
 
 	Eigen::MatrixXd E = Reconstruction3D::computeE(K, dlt.F);
