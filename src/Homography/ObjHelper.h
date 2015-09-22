@@ -29,6 +29,9 @@ static bool readPointsFromObj(const std::string& filename, std::vector<Eigen::Ve
 
 		if (!std::getline(inFile, str))
 		{
+			if (inFile.eof())
+				return true;
+
 			std::cerr << "Error: Problems when reading obj file: " << filename << std::endl;
 			return false;
 		}

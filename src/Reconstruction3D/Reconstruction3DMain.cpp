@@ -230,7 +230,7 @@ void test8Points()
 		<< std::endl << std::endl
 		<< "[Info]  Exporting : " << obj_file_name << std::endl << std::endl;
 
-	exportObj(obj_file_name, Points2DAll, P);
+	exportObj(obj_file_name, Points2D, P);
 }
 
 void testRansac()
@@ -263,7 +263,7 @@ void testRansac()
 
 	double threshold = 50;
 
-	ReconstructionDLT dlt = Reconstruction3D::solve(Points2DSurf, K, threshold, 500);
+	ReconstructionDLT dlt = Reconstruction3D::solve(Points2DSurf, K, threshold, 5000);
 	std::cout << "Inliers: " << dlt.inliersCount << " --> " << dlt.error << std::endl;
 
 	Eigen::MatrixXd E = Reconstruction3D::computeE(K, dlt.F);
@@ -294,6 +294,7 @@ void testRansac()
 		exportObj(obj_file_name, Points2DSurf, P);
 	}
 }
+
 
 
 int main(int argc, char* argv[])

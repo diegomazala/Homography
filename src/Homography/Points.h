@@ -67,6 +67,10 @@ public:
 
 	static bool readFromFile(const std::string filePath, std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points);
 
+
+	static void exportPointCorrespondencies(const std::string& filename, const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points2D);
+	static bool importPointCorrespondencies(const std::string filePath, std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points);
+	
 private:
 
 	std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> points;

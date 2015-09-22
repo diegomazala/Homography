@@ -10,4 +10,5 @@ add_subdirectory (TestNonLinear)
 
 add_subdirectory (TestReconstruction3DCube)
 add_subdirectory (TestReconstruction3DThaiLion)
+add_subdirectory (TestReconstruction3DAlison)
 add_subdirectory (TestTriangulation)

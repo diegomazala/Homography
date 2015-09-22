@@ -503,7 +503,8 @@ double Reconstruction3D::computeError(const std::vector<std::pair<Eigen::Vector2
 	return error;
 }
 
-int Reconstruction3D::computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points, const Eigen::MatrixXd& F, double threshold, double& error)
+int Reconstruction3D::computeInliers(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& points, 
+									const Eigen::MatrixXd& F, double threshold, double& error)
 {
 	int inliers = 0;
 	error = 0;
@@ -744,7 +745,6 @@ ReconstructionDLT::ReconstructionDLT(
 
 Eigen::MatrixXd ReconstructionDLT::solve()
 {
-
 	//
 	// Normalize points
 	// 

@@ -31,7 +31,7 @@ public:
 								const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts,
 								const std::pair<Eigen::MatrixXd, Eigen::MatrixXd>& K,
 								double threshold,
-								int maxIterations = 10);
+								int maxIterations);
 
 	
 	static Eigen::MatrixXd buildMatrixA(const std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>>& pts);
